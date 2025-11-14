@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+
 	"github.com/saku-730/web-occurrence/backend/internal/model"
 	"github.com/saku-730/web-occurrence/backend/internal/service"
 	"net/http"
@@ -21,10 +23,7 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 // Register はユーザー登録APIのエンドポイントなのだ
 func (h *UserHandler) Register(c *gin.Context) {
 	var req model.UserRegisterRequest
-
-	// 1. JSONリクエストを model.UserRegisterRequest にバインド（変換）＆バリデーション
 	if err := c.ShouldBindJSON(&req); err != nil {
-		// バリデーションエラー（email形式じゃない、パスワードが短いなど）
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -32,11 +31,19 @@ func (h *UserHandler) Register(c *gin.Context) {
 	// 2. Service を呼び出してビジネスロジックを実行
 	createdUser, err := h.userService.RegisterUser(&req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		// サービスから返されたエラーが「メール重複エラー」かチェック
+		if errors.Is(err, service.ErrEmailConflict) {
+			// HTTP 409 (Conflict) を返す
+			c.JSON(http.StatusConflict, gin.H{"error:This email address is already in user": err.Error()})
+			return
+		}
+
+		// その他のサーバー内部エラー
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "内部サーバーエラーが発生しました"})
 		return
 	}
 
-	// 3. 成功レスポンス（model.UserRegisterResponse）を作成
+	// 3. 成功レスポンス
 	res := model.UserRegisterResponse{
 		UserID:      createdUser.UserID,
 		UserName:    createdUser.UserName,
@@ -44,7 +51,25 @@ func (h *UserHandler) Register(c *gin.Context) {
 		MailAddress: createdUser.MailAddress,
 		CreatedAt:   createdUser.CreatedAt,
 	}
-
-	// 201 Created ステータスでレスポンスを返す
 	c.JSON(http.StatusCreated, res)
+}
+
+// Login はログインAPIのエンドポイントなのだ
+func (h *UserHandler) Login(c *gin.Context) {
+	var req model.UserLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	token, err := h.userService.LoginUser(&req)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	res := model.UserLoginResponse{
+		Token: token,
+	}
+	c.JSON(http.StatusOK, res)
 }

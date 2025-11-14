@@ -16,3 +16,14 @@ type UserRegisterResponse struct {
 	MailAddress string    `json:"mail_address"`
 	CreatedAt   time.Time `json:"created_at"`
 }
+
+// UserLoginRequest はログインAPIのJSONリクエストボディなのだ
+type UserLoginRequest struct {
+	MailAddress string `json:"mailaddress" binding:"required,email"`
+	Password    string `json:"password" binding:"required"` // ログイン時はminチェック不要
+}
+
+// UserLoginResponse はログインAPIの成功レスポンスなのだ
+type UserLoginResponse struct {
+	Token string `json:"token"` // JWTトークンを返す
+}

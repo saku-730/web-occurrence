@@ -17,7 +17,7 @@ func SetupRouter(userHandler *handler.UserHandler) *gin.Engine {
 		// POST /api/register
 		api.POST("/register", userHandler.Register)
 		
-		// (ここに /api/login などを追加していく)
+		api.POST("/login", userHandler.Login)
 	}
 
 	return r
