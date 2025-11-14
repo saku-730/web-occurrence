@@ -57,7 +57,6 @@ func (r *userRepository) CreateUser(user *entity.User) (*entity.User, error) {
 	return user, nil
 }
 
-
 // FindUserByEmail はメールアドレスでユーザーを1件検索するのだ
 func (r *userRepository) FindUserByEmail(email string) (*entity.User, error) {
 	var user entity.User
