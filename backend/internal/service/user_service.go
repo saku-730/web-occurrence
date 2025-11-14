@@ -1,10 +1,10 @@
 package service
 
 import (
-	"myapp/entity"       // (sのプロジェクト名)
-	"myapp/infrastructure" // (sのプロジェクト名)
-	"myapp/model"        // (sのプロジェクト名)
-	"myapp/repository"   // (sのプロジェクト名)
+	"github.com/saku-730/web-occurrence/backend/entity"
+	"github.com/saku-730/web-occurrence/backend/infrastructure"
+	"github.com/saku-730/web-occurrence/backend/model"
+	"github.com/saku-730/web-occurrence/backend/repository"
 	"strings"
 )
 

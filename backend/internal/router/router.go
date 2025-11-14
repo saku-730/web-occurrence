@@ -1,7 +1,7 @@
 package router
 
 import (
-	"myapp/handler" // (sのプロジェクト名)
+	"github.com/saku-730/web-occurrence/backend/handler"
 
 	"github.com/gin-gonic/gin"
 )

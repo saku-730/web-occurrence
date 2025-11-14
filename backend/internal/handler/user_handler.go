@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"myapp/model"   // (sのプロジェクト名)
-	"myapp/service" // (sのプロジェクト名)
+	"github.com/saku-730/web-occurrence/backend/model"
+	"github.com/saku-730/web-occurrence/backend/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

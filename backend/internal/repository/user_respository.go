@@ -2,7 +2,7 @@ package repository
 
 import (
 	// "database/sql" // 標準ライブラリは不要になったのだ
-	"myapp/entity" // (sのプロジェクト名)
+	"github.com/saku-730/web-occurrence/backend/entity"
 
 	"gorm.io/gorm" // GORMをインポート
 )

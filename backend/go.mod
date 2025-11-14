@@ -1,4 +1,4 @@
-module occurrence-web-1
+module github.com/saku-730/web-occurrence/backend
 
 go 1.25.0
 
