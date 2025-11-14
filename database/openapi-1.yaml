@@ -1,0 +1,1845 @@
+openapi: '3.0.3'
+info:
+  title: "specimen-web-manage API"
+  version: '0.0.2'
+servers:
+  - url: "http://localhost:8080"
+    description: "local server"
+paths:
+  /create:
+    get:
+      tags:
+        - "Occurrence"
+      summary: "prepare create page"
+      responses:
+        '200':
+          description: "get dropdown list and default value"
+          content:
+            application/json:
+              schema:
+                properties:
+                  dropdown_list:
+                    $ref: '#/components/schemas/Dropdown_list'
+                  default_value:
+                    $ref: '#/components/schemas/Default_value'
+    post:
+      tags:
+        - "Occurrence"
+      summary: "create occurrence data"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Occurrence'
+      responses:
+        "201":
+          description: "Success Create occurrence data and return created occurrence data value"
+          headers:
+            Location:
+              description: "URL of created resource"
+              schema:
+                type: string
+                format: uri
+                example: "/occurrence/1"
+          content:
+            application/json:
+              schema:
+                $ref : '#/components/schemas/Occurrence'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+
+  /create/{occurrence_id}/attachments:
+    post:
+      tags:
+        - "Occurrence"
+      summary: "attach files to just created occurrence data"
+      description: "attach files to just created occurrence data by occurrence_id if needed"
+      parameters:
+        - $ref: '#/components/parameters/OccurrenceId'
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InitialAttachmentRequest'
+      responses:
+        "200":
+          description: "Success attach files to existing occurrence data"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example:
+                  - "sample1.jpg"
+                  - "sample2.wav"
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+
+  /search:
+    get:
+      tags:
+        - "Occurrence"
+      summary: "search occurrence data by various conditions"
+      parameters:
+        - $ref: '#/components/parameters/QueryPage'
+        - $ref: '#/components/parameters/QueryPerPage'
+        - $ref: '#/components/parameters/QueryUserId'
+        - $ref: '#/components/parameters/QueryOccurrenceId'
+        - $ref: '#/components/parameters/QueryProjectId'
+        - $ref: '#/components/parameters/QueryIndividualId'
+        - $ref: '#/components/parameters/QueryLifestage'
+        - $ref: '#/components/parameters/QuerySex'
+        - $ref: '#/components/parameters/QueryBodyLengh'
+        - $ref: '#/components/parameters/QueryCreatedStart'
+        - $ref: '#/components/parameters/QueryCreatedEnd'
+        - $ref: '#/components/parameters/QueryPlaceName'
+        - $ref: '#/components/parameters/QuerySpecies'
+        - $ref: '#/components/parameters/QueryGenus'
+        - $ref: '#/components/parameters/QueryFamily'
+        - $ref: '#/components/parameters/QueryOrder'
+        - $ref: '#/components/parameters/QueryClass'
+        - $ref: '#/components/parameters/QueryPhylum'
+        - $ref: '#/components/parameters/QueryKingdom'
+        - $ref: '#/components/parameters/QueryOthers'
+        - $ref: '#/components/parameters/QueryObservationUserId'
+        - $ref: '#/components/parameters/QueryObservationMethodId'
+        - $ref: '#/components/parameters/QueryObservedStart'
+        - $ref: '#/components/parameters/QueryObservedEnd'
+        - $ref: '#/components/parameters/QuerySpecimenUserId'
+        - $ref: '#/components/parameters/QuerySpecimenMethodsId'
+        - $ref: '#/components/parameters/QuerySpecimenCreatedStart'
+        - $ref: '#/components/parameters/QuerySpecimenCreatedEnd'
+        - $ref: '#/components/parameters/QueryInstitutionId'
+        - $ref: '#/components/parameters/QueryCollectionId'
+        - $ref: '#/components/parameters/QueryIdentificationUserId'
+        - $ref: '#/components/parameters/QueryIdentifiedStart'
+        - $ref: '#/components/parameters/QueryIdentifiedEnd'
+        - $ref: '#/components/parameters/QueryBehavior'
+        - $ref: '#/components/parameters/QueryNote'
+      responses:
+        "200":
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/Dropdown_list'
+                  - $ref: '#/components/schemas/SearchResponse'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+
+  /occurrences/{occurrence_id}:
+    get:
+      tags:
+        - "Occurrence"
+      summary: "get indicidual occurrence data by occurrence_id"
+      parameters:
+        - $ref: '#/components/parameters/OccurrenceId'
+      responses:
+        "200":
+          description: "Success"
+          content:
+            multipart/form-data:
+              schema:
+                $ref: '#/components/schemas/Occurrence_detail'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - "Occurrence"
+      summary: "update occurrence data by occurrence_id"
+      parameters:
+        - $ref: '#/components/parameters/OccurrenceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OccurrencePut'
+      responses:
+        "200":
+          description: "Success Update occurrence data and return updated occurrence data value"
+          content:
+            application/json:
+              schema:
+                $ref : '#/components/schemas/OccurrencePut'
+        "400":
+          $ref: '#/components/responses/BadRequest'
+        "500":
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - "Occurrence"
+      summary: "delete occurrence data by occurrence_id"
+      parameters:
+        - $ref: '#/components/parameters/OccurrenceId'
+      responses:
+        '204':
+          $ref: '#/components/responses/SuccessDelete'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /occurrences/{occurrence_id}/attachments:
+    post:
+      tags: ["Occurrence"]
+      summary: "add new attachment files to existing occurrence data"
+      parameters:
+        - $ref: '#/components/parameters/OccurrenceId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Attachment_files'
+      responses:
+        '200':
+          description: "Successfully added attachment files"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment_infos'
+
+  /occurrences/{occurrence_id}/attachments/{attachment_id}:
+    delete:
+      tags: ["Occurrence"]
+      summary: "delete attachments file from existing occurrence data"
+      parameters:
+        - $ref: '#/components/parameters/OccurrenceId'
+        - $ref: '#/components/parameters/AttachmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Attachment_infos'
+      responses:
+        '204':
+          $ref: '#/components/responses/SuccessDelete'
+
+  /user:
+    get:
+      tags:
+        - "User"
+      summary: "get all users"
+      responses:
+        '200':
+          description: "A list of users"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User_infos'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - "User"
+      summary: "create new user"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewUserRequest'
+      responses:
+        '201':
+          description: "Success Create user and return created user value"
+          headers:
+            Location:
+              description: "URL of created resource"
+              schema:
+                type: string
+                format: uri
+                example: "/user/1"
+          content:
+            application/json:
+              schema:
+                $ref : '#/components/schemas/User_info'
+
+  /user/{user_id}:
+    get:
+      tags:
+        - "User"
+      summary: "get user info by user_id"
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: "A user info"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UpdateUserRequest' # Reusing schema as structure is identical
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - "User"
+      summary: "update user info by user_id"
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: "Success Update user and return updated user value"
+    delete:
+      tags:
+        - "User"
+      summary: "delete user by user_id"
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204':
+          $ref: '#/components/responses/SuccessDelete'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /project:
+    get:
+      tags:
+        - "Project"
+      summary: "get all projects"
+      responses:
+        '200':
+          description: "A list of projects"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project_infos'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - "Project"
+      summary: "create new project"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project_info'
+      responses:
+        '201':
+          description: "Success Create project and return created project value"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /project/{project_id}:
+    get:
+      tags:
+        - "Project"
+      summary: "get project info by project_id"
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: "A project info"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project_info'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - "Project"
+      summary: "update project info by project_id"
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Project_info'
+      responses:
+        '200':
+          description: "Success Update project and return updated project value"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - "Project"
+      summary: "delete project by project_id"
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '204':
+          $ref: '#/components/responses/SuccessDelete'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /observation:
+    get:
+      tags:
+        - "Observation"
+      summary: "get all observation methods"
+      responses:
+        '200':
+          description: "A list of observation methods"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Observations'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - "Observation"
+      summary: "create new observation method"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Observation_info'
+      responses:
+        '201':
+          description: "Success Create observation method and return created observation method value"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /Observation/{observation_id}:
+    get:
+      tags:
+        - "Observation"
+      summary: "get Observation method info by observation_id"
+      parameters:
+        - $ref: '#/components/parameters/ObservationId'
+      responses:
+        '200':
+          description: "A observation method info"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Observation_info'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - "Observation"
+      summary: "update observation info by observation_id"
+      parameters:
+        - $ref: '#/components/parameters/ObservationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Observation_info'
+      responses:
+        '200':
+          description: "Success Update observation method and return updated observation method value"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - "Observation"
+      summary: "delete observation by observation_id"
+      parameters:
+        - $ref: '#/components/parameters/ObservationId'
+      responses:
+        '204':
+          $ref: '#/components/responses/SuccessDelete'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /specimen:
+    get:
+      tags:
+        - "Specimen"
+      summary: "get all specimen methods"
+      responses:
+        '200':
+          description: "A list of specimen methods"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Specimen_infos'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+        - "Specimen"
+      summary: "create new specimen method"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Specimen_info'
+      responses:
+        '201':
+          description: "Success Create specimen method and return created specimen method value"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /specimen/{specimen_id}:
+    get:
+      tags:
+        - "Specimen"
+      summary: "get specimen method info by specimen_id"
+      parameters:
+        - $ref: '#/components/parameters/SpecimenId'
+      responses:
+        '200':
+          description: "A specimen method info"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Specimen_info'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags:
+        - "Specimen"
+      summary: "update specimen method info by specimen_id"
+      parameters:
+        - $ref: '#/components/parameters/SpecimenId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Specimen_info'
+      responses:
+        '200':
+          description: "Success Update specimen method and return updated specimen method value"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags:
+        - "Specimen"
+      summary: "delete specimen method by specimen_id"
+      parameters:
+        - $ref: '#/components/parameters/SpecimenId'
+      responses:
+        '204':
+          $ref: '#/components/responses/SuccessDelete'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  schemas:
+    # User Schemas
+    User_info:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+          readOnly: true
+        user_name:
+          type: string
+          example: "admin"
+        email:
+          type: string
+          example: "mail@email.com"
+        role:
+          type: string
+          example: "administrator"
+    User_infos:
+      type: array
+      description: "list of user info"
+      items:
+        $ref: '#/components/schemas/User_info'
+    NewUserRequest:
+      type: object
+      properties:
+        user_name:
+          type: string
+          example: "admin"
+        email:
+          type: string
+          example: "mail@email.com"
+        role:
+          type: string
+          example: "administrator"
+        default_setting:
+          $ref: '#/components/schemas/Occurrence'
+    UpdateUserRequest:
+      type: object
+      properties:
+        User_info: # Original key name is preserved
+          $ref: '#/components/schemas/User_info'
+        default_setting:
+          $ref: '#/components/schemas/Occurrence'
+
+    # Project Schemas
+    Project_info:
+      type: object
+      properties:
+        project_id:
+          type: integer
+          example: 1
+        project_name:
+          type: string
+          example: "test project"
+        description:
+          type: string
+          example: "sample description"
+        start_date:
+          type: string
+          format: date
+          example: "2024-01-01"
+        finished_date:
+          type: string
+          format: date
+          example: "2024-12-31"
+        note:
+          type: string
+          example: "sample note"
+        project_member:
+          $ref: '#/components/schemas/Project_member'
+    Project_infos:
+      type: array
+      description: "list of project info"
+      items:
+        $ref: '#/components/schemas/Project_info'
+    Project_member:
+      type: array
+      description: "list of project members"
+      items:
+        type: integer
+        description: "user_id of project member"
+        example: 1
+      example: [1, 2, 3]
+
+    # Language Schemas
+    Language:
+      type: object
+      properties:
+        language_id:
+          type: integer
+          example: 1
+        language_common:
+          type: string
+          example: "English"
+    Languages:
+      type: array
+      description: "list of languages"
+      items:
+        $ref: '#/components/schemas/Language'
+
+    # Observation Schemas
+    Observation:
+      type: object
+      properties:
+        observation_method_id:
+          type: integer
+          example: 1
+        observation_method_name:
+          type: string
+          example: "Trap"
+    Observations:
+      type: array
+      description: "list of observation methods"
+      items:
+        $ref: '#/components/schemas/Observation'
+    Observation_info:
+      type: object
+      properties:
+        observation_id:
+          type: integer
+          example: 1
+          readOnly: true
+        observation_user_id:
+          type: integer
+          example: 1
+        observation_method_id:
+          type: integer
+          example: 1
+        observation_method_name:
+          type: string
+          example: "Trap"
+        page_id:
+          type: integer
+          example: 1
+        behavior:
+          type: string
+          example: "sample behavior"
+        observed_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+    Observation_infos:
+      type: array
+      description: "list of observation info"
+      items:
+        $ref: '#/components/schemas/Observation_info'
+
+    # Specimen Schemas
+    Specimen:
+      type: object
+      properties:
+        specimen_methods_id:
+          type: integer
+          example: 1
+        specimen_methods_common:
+          type: string
+          example: "Dried"
+    Specimens:
+      type: array
+      description: "list of specimen methods"
+      items:
+        $ref: '#/components/schemas/Specimen'
+    Specimen_info:
+      type: object
+      properties:
+        specimen_methods_id:
+          type: integer
+          example: 1
+        specimen_methods_common:
+          type: string
+          example: "Dried"
+        page_id:
+          type: integer
+          example: 1
+    Specimen_infos:
+      type: array
+      description: "list of specimen method info"
+      items:
+        $ref: '#/components/schemas/Specimen_info'
+
+    # Institution Schemas
+    Institution:
+      type: object
+      properties:
+        institution_id:
+          type: integer
+          example: 1
+        institution_code:
+          type: string
+          example: "INST1"
+    Institutions:
+      type: array
+      description: "list of institutions"
+      items:
+        $ref: '#/components/schemas/Institution'
+
+    # Identification & Classification Schemas
+    Identification_info:
+      type: object
+      properties:
+        identification_id:
+          type: integer
+          example: 1
+          readOnly: true
+        identification_user_id:
+          type: integer
+          example: 1
+        identified_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        source_info:
+          type: string
+          example: "sample identification sorce paper"
+    Classification:
+      type: object
+      properties:
+        classification_id:
+          type: integer
+          example: 1
+          readOnly: true
+        species:
+          type: string
+          example: "fetida"
+        genus:
+          type: string
+          example: "Eisenia"
+        family:
+          type: string
+          example: "Lumbricidae"
+        order:
+          type: string
+          example: "Haplotaxida"
+        class:
+          type: string
+          example: "Clitellata"
+        phylum:
+          type: string
+          example: "Annelida"
+        kingdom:
+          type: string
+          example: "Animalia"
+        others:
+          type: string
+          example: "subspecies"
+
+    # Attachment Schemas
+    InitialAttachmentRequest:
+      type: object
+      properties:
+        upload_files:
+          type: array
+          example: ["sample wav file", "sample jpg file"]
+          items:
+            type: string
+            format: binary
+        file_name:
+          type: array
+          example: ["sample1.wav", "sample2.jpg"]
+          items:
+            type: string
+    Attachment_file:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: "file to be attached"
+          example: "jpg file data"
+        file_name:
+          type: string
+          description: "file name"
+          example: "sample.jpg"
+    Attachment_files:
+      type: array
+      items:
+        $ref: '#/components/schemas/Attachment_file'
+      description: "list of files to be attached"
+    Attachment_info:
+      type: object
+      properties:
+        attachment_id:
+          type: integer
+          example: 1
+        file_path:
+          type: string
+          example: "sample.jpg"
+        file_name:
+          type: string
+          example: "sample.jpg"
+        note:
+          type: string
+          example: "sample note"
+    Attachment_infos:
+      type: array
+      items:
+        $ref: '#/components/schemas/Attachment_info'
+      description: "list of attached file info"
+
+    # Occurrence Schemas
+    Occurrence:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        project_id:
+          type: integer
+          example: 1
+        individual_id:
+          type: integer
+          example: 1
+        lifestage:
+          type: string
+          example: "adult"
+        sex:
+          type: string
+          example: "male"
+        body_length:
+          type: string
+          example: "10mm"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        language_id:
+          type: integer
+          example: 1
+        latitude:
+          type: number
+          format: float
+          example: 35.6895
+        longitude:
+          type: number
+          format: float
+          example: 139.6917
+        place_name:
+          type: string
+          example: "Tokyo shinjuku"
+        note:
+          type: string
+          example: "sample note"
+        classification:
+          $ref: '#/components/schemas/Classification'
+        observation:
+          $ref: '#/components/schemas/OccurrenceObservation'
+        specimen:
+          $ref: '#/components/schemas/OccurrenceSpecimen'
+        identification:
+          $ref: '#/components/schemas/OccurrenceIdentification'
+    OccurrencePut:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        project_id:
+          type: integer
+          example: 1
+        individual_id:
+          type: integer
+          example: 1
+        lifestage:
+          type: string
+          example: "adult"
+        sex:
+          type: string
+          example: "male"
+        body_length:
+          type: string
+          example: "10mm"
+        language_id:
+          type: integer
+          example: 1
+        latitude:
+          type: number
+          format: float
+          example: 35.6895
+        longitude:
+          type: number
+          format: float
+          example: 139.6917
+        place_name:
+          type: string
+          example: "Tokyo shinjuku"
+        note:
+          type: string
+          example: "sample note"
+        classification:
+          $ref: '#/components/schemas/Classification'
+        observation:
+          $ref: '#/components/schemas/OccurrenceObservations'
+        specimen:
+          $ref: '#/components/schemas/OccurrenceSpecimens'
+        identification:
+          $ref: '#/components/schemas/OccurrenceIdentifications'
+  
+    Occurrences:
+      type: array
+      description: "list of occurrences"
+      items:
+        $ref: '#/components/schemas/Occurrence'
+    Occurrence_detail:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        user_name:
+          type: string
+          example: "admin"
+        project_id:
+          type: integer
+          example: 1
+        project_name:
+          type: string
+          example: "test project"
+        individual_id:
+          type: integer
+          example: 1
+        lifestage:
+          type: string
+          example: "adult"
+        sex:
+          type: string
+          example: "male"
+        body_length:
+          type: string
+          example: "10mm"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        language_id:
+          type: integer
+          example: 1
+        latitude:
+          type: number
+          format: float
+          example: 35.6895
+        longitude:
+          type: number
+          format: float
+          example: 139.6917
+        place_name:
+          type: string
+          example: "Tokyo shinjuku"
+        note:
+          type: string
+          example: "sample note"
+        classification:
+          $ref: '#/components/schemas/Classification'
+        observation:
+          type: array
+          description: "list of observations"
+          items:
+            $ref: '#/components/schemas/Fyll_observation'
+        specimen:
+          type: array
+          description: "list of specimens"
+          items:
+            $ref: '#/components/schemas/Full_specimen'
+        identification:
+          type: array
+          description: "list of identifications"
+          items:
+            $ref: '#/components/schemas/Full_identification'
+        attachments:
+          type: array
+          description: "list of attached files"
+          items:
+            $ref: '#/components/schemas/Attachment_info'
+    
+    Fyll_observation:
+      type: object
+      properties:  
+        observation_id:
+          type: integer
+          example: 1
+          readOnly: true
+        observation_user_id:
+          type: integer
+          example: 1
+        observation_user:
+          type: string
+          example: "admin"
+        observation_method_id:
+          type: integer
+          example: 1
+        observation_method_name:
+          type: string
+          example: "Trap"
+        page_id:
+          type: integer
+          example: 1
+        behavior:
+          type: string
+          example: "sample behavior"
+        observed_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+
+    Full_specimen:
+      type: object
+      properties:
+        specimen_id:
+          type: integer
+          example: 1
+          readOnly: true
+        institution_id:
+          type: integer
+          example: 1
+        institution_code:
+          type: string
+          example: "INST1"
+        collection_id:
+          type: string
+          example: "C-001"
+        specimen_methods:
+          type: array
+          description: "list of specimen methods"
+          items:
+            type: object
+            properties:
+              specimen_user_id:
+                type: integer
+                example: 1
+              specimen_user:
+                type: string
+                example: "admin"
+              specimen_methods_id:
+                type: integer
+                example: 1
+              specimen_methods_common:
+                type: string
+                example: "Dried"
+              created_at:
+                type: string
+                format: date-time
+                example: "2024-12-31T23:59:59Z"
+              page_id:
+                type: integer
+                example: 1
+
+    Full_identification:
+      type: object
+      properties:
+        identification_id:
+          type: integer
+          example: 1
+          readOnly: true
+        identification_user_id:
+          type: integer
+          example: 1
+        identification_user:
+          type: string
+          example: "admin"
+        identified_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        source_info:
+          type: string
+          example: "sample identification sorce paper"
+
+    Occurrence_details:
+      type: array
+      description: "list of occurrence details"
+      items:
+        $ref: '#/components/schemas/Occurrence_detail'
+    
+    FullOccurrence:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        user_name:
+          type: string
+          example: "admin"
+        project_id:
+          type: integer
+          example: 1
+        project_name:
+          type: string
+          example: "test project"
+        individual_id:
+          type: integer
+          example: 1
+        lifestage:
+          type: string
+          example: "adult"
+        sex:
+          type: string
+          example: "male"
+        body_length:
+          type: string
+          example: "10mm"
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        language_id:
+          type: integer
+          example: 1
+        latitude:
+          type: number
+          format: float
+          example: 35.6895
+        longitude:
+          type: number
+          format: float
+          example: 139.6917
+        place_name:
+          type: string
+          example: "Tokyo shinjuku"
+        note:
+          type: string
+          example: "sample note"
+        classification:
+          $ref: '#/components/schemas/Classification'
+        observation:
+          properties:
+            observation_id:
+              type: integer
+              example: 1
+              readOnly: true
+            observation_user_id:
+              type: integer
+              example: 1
+            observation_user:
+              type: string
+              example: "admin"
+            observation_method_id:
+              type: integer
+              example: 1
+            observation_method_name:
+              type: string
+              example: "Trap"
+            page_id:
+              type: integer
+              example: 1
+            behavior:
+              type: string
+              example: "sample behavior"
+            observed_at:
+              type: string
+              format: date-time
+              example: "2024-01-01T00:00:00Z"
+        specimen:
+          properties:
+            specimen_id:
+              type: integer
+              example: 1
+              readOnly: true
+            specimen_user_id:
+              type: integer
+              example: 1
+            specimen_user:
+              type: string
+              example: "admin"
+            specimen_methods_id:
+              type: integer
+              example: 1
+            specimen_methods_common:
+              type: string
+              example: "Dried"
+            page_id:
+              type: integer
+              example: 1
+            institution_id:
+              type: integer
+              example: 1
+            institution_code:
+              type: string
+              example: "INST1"
+            collection_id:
+              type: string
+              example: "C-001"
+        identification:
+          properties:
+            identification_id:
+              type: integer
+              example: 1
+              readOnly: true
+            identification_user_id:
+              type: integer
+              example: 1
+            identification_user:
+              type: string
+              example: "admin"
+            identified_at:
+              type: string
+              format: date-time
+              example: "2024-01-01T00:00:00Z"
+            source_info:
+              type: string
+              example: "sample identification sorce paper"
+    FullOccurrences:
+      type: array
+      description: "list of full occurrences"
+      items:
+        $ref: '#/components/schemas/FullOccurrence'
+
+    SearchResponse:
+      type: object
+      properties:
+        occurrences:
+          $ref: '#/components/schemas/FullOccurrences'
+        metadata:
+          type: object
+          properties:
+            total_results:
+              type: integer
+              example: 100
+            current_page:
+              type: integer
+              example: 1
+            per_page:
+              type: integer
+              example: 10
+            total_pages:
+              type: integer
+              example: 10
+
+    OccurrenceObservation:
+      type: object
+      properties:
+        observation_method_id:
+          type: integer
+          example: 1
+        behavior:
+          type: string
+          example: "sample behavior"
+        observed_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        observation_user_id:
+          type: integer
+          example: 1
+    OccurrenceObsPut:
+      type: object
+      properties:
+        observation_id:
+          type: integer
+          example: 1
+        observation_method_id:
+          type: integer
+          example: 1
+        behavior:
+          type: string
+          example: "sample behavior"
+        observed_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        observation_user_id:
+          type: integer
+          example: 1
+
+
+    OccurrenceObservations:
+      type: array
+      description: "list of occurrence observations"
+      items:
+        $ref: '#/components/schemas/OccurrenceObsPut'
+
+    OccurrenceSpecimen:
+      type: object
+      properties:
+        specimen_user_id:
+          type: integer
+          example: 1
+        specimen_methods_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        institution_id:
+          type: integer
+          example: 1
+        collection_id:
+          type: string
+          example: "C-001"
+
+    OccurrenceSpecimenPut:
+      type: object
+      properties:
+        specimen_id:
+          type: integer
+          example: 1  
+        specimen_user_id:
+          type: integer
+          example: 1
+        specimen_methods_id:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        institution_id:
+          type: integer
+          example: 1
+        collection_id:
+          type: string
+          example: "C-001"
+
+    OccurrenceSpecimens:
+      type: array
+      description: "list of occurrence specimens"
+      items:
+        $ref: '#/components/schemas/OccurrenceSpecimenPut'
+
+    OccurrenceIdentification:
+      type: object
+      properties:
+        identification_user_id:
+          type: integer
+          example: 1
+        identified_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        source_info:
+          type: string
+          example: "sample identification sorce paper"
+
+    OccurrenceIdentPut:
+      type: object
+      properties:
+        identification_id:
+          type: integer
+          example: 1
+        identification_user_id:
+          type: integer
+          example: 1
+        identified_at:
+          type: string
+          format: date-time
+          example: "2024-01-01T00:00:00Z"
+        source_info:
+          type: string
+          example: "sample identification sorce paper"
+
+    OccurrenceIdentifications:
+      type: array
+      description: "list of occurrence identifications"   
+      items:
+        $ref: '#/components/schemas/OccurrenceIdentPut'
+
+    # Misc Schemas for Dropdown/Defaults
+    Dropdown_list:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            type: object
+            properties:
+              user_id:
+                type: integer
+              user_name:
+                type: string
+        projects:
+          type: array
+          items:
+            type: object
+            properties:
+              project_id:
+                type: integer
+              project_name:
+                type: string
+        languages:
+          $ref: '#/components/schemas/Languages'
+        observation_methods:
+          $ref: '#/components/schemas/Observations'
+        specimen_methods:
+          $ref: '#/components/schemas/Specimens'
+        institutions:
+          $ref: '#/components/schemas/Institutions'
+    Default_value:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1
+        user_name:
+          type: string
+          example: "admin"
+        project_id:
+          type: integer
+          example: 1
+        project_name:
+          type: string
+          example: "test project"
+        individual_id:
+          type: integer
+          example: 1
+        lifestage:
+          type: string
+          example: "adult"
+        sex:
+          type: string
+          example: "male"
+        language_common:
+          type: string
+          example: "English"
+        language_id:
+          type: integer
+          example: 1
+        place_name:
+          type: string
+          example: "Tokyo shinjuku"
+        note:
+          type: string
+          example: "sample note"
+        classification:
+          type: object
+          properties:
+            species: { type: string, example: "fetida" }
+            genus: { type: string, example: "Eisenia" }
+            family: { type: string, example: "Lumbricidae" }
+            order: { type: string, example: "Haplotaxida" }
+            class: { type: string, example: "Clitellata" }
+            phylum: { type: string, example: "Annelida" }
+            kingdom: { type: string, example: "Animalia" }
+            others: { type: string, example: "subspecies" }
+        observation:
+          type: object
+          properties:
+            observation_user_id: { type: integer, example: 1 }
+            observation_user: { type: string, example: "admin" }
+            observation_method_id: { type: integer, example: 1 }
+            observation_method_name: { type: string, example: "Trap" }
+            behavior: { type: string, example: "sample behavior" }
+            observed_at: { type: string, format: date-time, example: "2024-01-01T00:00:00Z" }
+        specimen:
+          type: object
+          properties:
+            specimen_user_id: { type: integer, example: 1 }
+            specimen_user: { type: string, example: "admin" }
+            specimen_methods_id: { type: integer, example: 1 }
+            specimen_methods_common: { type: string, example: "Dried" }
+        identification:
+          type: object
+          properties:
+            identification_user_id: { type: integer, example: 1 }
+            identification_user: { type: string, example: "admin" }
+            identified_at: { type: string, format: date-time, example: "2024-01-01T00:00:00Z" }
+            source_info: { type: string, example: "sample identification sorce paper" }
+
+  parameters:
+    # Path Parameters
+    OccurrenceId:
+      name: "occurrence_id"
+      in: "path"
+      required: true
+      description: "ID of occurrence"
+      schema:
+        type: integer
+        example: 1
+    AttachmentId:
+      name: "attachment_id"
+      in: "path"
+      required: true
+      description: "ID of attachment file"
+      schema:
+        type: integer
+        example: 1
+    UserId:
+      name: "user_id"
+      in: "path"
+      required: true
+      description: "ID of user"
+      schema:
+        type: integer
+        example: 1
+    ProjectId:
+      name: "project_id"
+      in: "path"
+      required: true
+      description: "ID of project"
+      schema:
+        type: integer
+        example: 1
+    ObservationId:
+      name: "observation_id"
+      in: "path"
+      required: true
+      description: "ID of observation method"
+      schema:
+        type: integer
+        example: 1
+    SpecimenId:
+      name: "specimen_id"
+      in: "path"
+      required: true
+      description: "ID of specimen method"
+      schema:
+        type: integer
+        example: 1
+    
+    # Query Parameters (from /search)
+    QueryPage:
+      name: page
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "page number for pagination"
+    QueryPerPage:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        example: 10
+      description: "number of items per page for pagination"
+    QueryUserId:
+      name: user_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "user_id of occurrence data"
+    QueryOccurrenceId:
+      name: occurrence_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "occurrence_id of occurrence data"
+    QueryProjectId:
+      name: project_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "project_id of occurrence data"
+    QueryIndividualId:
+      name: individual_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "individual_id of occurrence data"
+    QueryLifestage:
+      name: lifestage
+      in: query
+      schema:
+        type: string
+        example: "adult"
+      description: "lifestage of occurrence data"
+    QuerySex:
+      name: sex
+      in: query
+      schema:
+        type: string
+        example: "male"
+      description: "sex of occurrence data"
+    QueryBodyLengh:
+      name: body_lengh
+      in: query
+      schema:
+        type: string
+        example: "10mm"
+      description: "body_lengh of occurrence data"
+    QueryCreatedStart:
+      name: created_start
+      in: query
+      schema:
+        type: string
+        format: date-time
+        example: "2024-01-01T00:00:00Z"
+      description: "created_at start of occurrence data"
+    QueryCreatedEnd:
+      name: created_end
+      in: query
+      schema:
+        type: string
+        format: date-time
+        example: "2024-12-31T23:59:59Z"
+      description: "created_at end of occurrence data"
+    QueryPlaceName:
+      name: place_name
+      in: query
+      schema:
+        type: string
+        example: "Tokyo shinjuku"
+      description: "place_name of occurrence data"
+    QuerySpecies:
+      name: species
+      in: query
+      schema:
+        type: string
+        example: "fetida"
+      description: "species of occurrence data"
+    QueryGenus:
+      name: genus
+      in: query
+      schema:
+        type: string
+        example: "Eisenia"
+      description: "genus of occurrence data"
+    QueryFamily:
+      name: family
+      in: query
+      schema:
+        type: string
+        example: "Lumbricidae"
+      description: "family of occurrence data"
+    QueryOrder:
+      name: order
+      in: query
+      schema:
+        type: string
+        example: "Haplotaxida"
+      description: "order of occurrence data"
+    QueryClass:
+      name: class
+      in: query
+      schema:
+        type: string
+        example: "Clitellata"
+      description: "class of occurrence data"
+    QueryPhylum:
+      name: phylum
+      in: query
+      schema:
+        type: string
+        example: "Annelida"
+      description: "phylum of occurrence data"
+    QueryKingdom:
+      name: kingdom
+      in: query
+      schema:
+        type: string
+        example: "Animalia"
+      description: "kingdom of occurrence data"
+    QueryOthers:
+      name: others
+      in: query
+      schema:
+        type: string
+        example: "subspecies"
+      description: "sub-classification of occurrence data"
+    QueryObservationUserId:
+      name: observation_user_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "observation_user_id of occurrence data"
+    QueryObservationMethodId:
+      name: observation_method_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "observation_method_id of occurrence data"
+    QueryObservedStart:
+      name: observed_start
+      in: query
+      schema:
+        type: string
+        format: date-time
+        example: "2024-01-01T00:00:00Z"
+      description: "observed_at start of occurrence data"
+    QueryObservedEnd:
+      name: observed_end
+      in: query
+      schema:
+        type: string
+        format: date-time
+        example: "2024-12-31T23:59:59Z"
+      description: "observed_at end of occurrence data"
+    QuerySpecimenUserId:
+      name: specimen_user_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "specimen_user_id of occurrence data"
+    QuerySpecimenMethodsId:
+      name: specimen_methods_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "specimen_methods_id of occurrence data"
+    QuerySpecimenCreatedStart:
+      name: specimen_created_start
+      in: query
+      schema:
+        type: string
+        format: date-time
+        example: "2024-01-01T00:00:00Z"
+      description: "specimen_created_at start of occurrence data"
+    QuerySpecimenCreatedEnd:
+      name: specimen_created_end
+      in: query
+      schema:
+        type: string
+        format: date-time
+        example: "2024-12-31T23:59:59Z"
+      description: "specimen_created_at end of occurrence data"
+    QueryInstitutionId:
+      name: institution_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "institution_id of occurrence data"
+    QueryCollectionId:
+      name: collection_id
+      in: query
+      schema:
+        type: string
+        example: "C-001"
+      description: "collection id of occurrence data"
+    QueryIdentificationUserId:
+      name: identification_user_id
+      in: query
+      schema:
+        type: integer
+        example: 1
+      description: "identification_user_id of occurrence data"
+    QueryIdentifiedStart:
+      name: identified_start
+      in: query
+      schema:
+        type: string
+        format: date-time
+        example: "2024-01-01T00:00:00Z"
+      description: "identified_at start of occurrence data"
+    QueryIdentifiedEnd:
+      name: identified_end
+      in: query
+      schema:
+        type: string
+        format: date-time
+        example: "2024-12-31T23:59:59Z"
+      description: "identified_at end of occurrence data"
+    QueryBehavior:
+      name: behavior
+      in: query
+      schema:
+        type: string
+        example: "sample behavior"
+      description: "behavior of occurrence data"
+    QueryNote:
+      name: note
+      in: query
+      schema:
+        type: string
+        example: "sample note"
+      description: "note of occurrence data"
+
+  responses:
+    BadRequest:
+      description: "Bad Request"
+    ServerError:
+      description: "Server Error"
+    SuccessDelete:
+      description: "Successfully deleted"

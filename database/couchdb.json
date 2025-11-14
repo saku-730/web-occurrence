@@ -1,0 +1,176 @@
+function(newDoc, oldDoc, userCtx, secObj) {
+
+  // ---------------------------------
+  // ヘルパー関数（門番の道具）
+  // ---------------------------------
+
+  function throwError(message) {
+    throw ({
+      forbidden: message
+    });
+  }
+
+  function required(doc, field) {
+    if (!doc || doc[field] === undefined || doc[field] === null || doc[field] === "") {
+      throwError('"' + field + '" フィールドは必須なのだ。');
+    }
+  }
+
+  function isString(doc, field) {
+    if (doc[field] && typeof doc[field] !== 'string') {
+      throwError('"' + field + '" は文字列である必要があるのだ。');
+    }
+  }
+
+  function isObject(doc, field) {
+    if (doc[field] && (typeof doc[field] !== 'object' || Array.isArray(doc[field]) || doc[field] === null)) {
+      throwError('"' + field + '" はオブジェクトである必要があるのだ。');
+    }
+  }
+
+  function isArray(doc, field) {
+    if (doc[field] && !Array.isArray(doc[field])) {
+      throwError('"' + field + '" は配列である必要があるのだ。');
+    }
+  }
+
+  // 配列の中身をチェックするヘルパー
+  function validateArrayItems(arr, validatorFunc) {
+    if (arr && Array.isArray(arr)) {
+      for (var i = 0; i < arr.length; i++) {
+        if (typeof arr[i] !== 'object') {
+          throwError('配列の中身はオブジェクトじゃないとダメなのだ。');
+        }
+        validatorFunc(arr[i]);
+      }
+    }
+  }
+
+  // ---------------------------------
+  // メインの検証ロジック（門番の仕事）
+  // ---------------------------------
+
+  // --- ルールB: 削除処理 (DELETE) ---
+  if (newDoc._deleted) {
+    return;
+  }
+
+  // --- ルールC: 全ドキュメント共通の必須項目 ---
+  required(newDoc, 'type');
+  required(newDoc, 'workstation_id');
+  required(newDoc, 'created_by_user_id'); // PostgreSQLのuser_idに相当
+
+  isString(newDoc, 'type');
+  isString(newDoc, 'workstation_id');
+  isString(newDoc, 'created_by_user_id');
+
+  // ---------------------------------
+  // type ごとの詳細なスキーマチェック
+  // ---------------------------------
+
+  switch (newDoc.type) {
+
+    /**
+     * 中核データ: オカレンス
+     * PostgreSQLの多くのテーブルを非正規化して集約
+     */
+    case 'occurrence':
+      // --- 必須の埋め込みオブジェクト（UUIDチェック）---
+      required(newDoc.classification_data, 'classification_id'); // UUID
+      isString(newDoc.classification_data, 'classification_id');
+
+      required(newDoc, 'place_data');
+      isObject(newDoc, 'place_data');
+      required(newDoc.place_data, 'place_id'); // UUID
+      isString(newDoc.place_data, 'place_id');
+      required(newDoc.place_data, 'place_name_id'); // UUID
+      isString(newDoc.place_data, 'place_name_id');
+
+      // --- 埋め込み配列（存在すれば中身のUUIDをチェック）---
+      isArray(newDoc, 'identifications');
+      validateArrayItems(newDoc.identifications, function(item) {
+        required(item, 'identification_id'); // UUID
+        isString(item, 'identification_id');
+      });
+
+      isArray(newDoc, 'specimens');
+      validateArrayItems(newDoc.specimens, function(item) {
+        required(item, 'specimen_id'); // UUID
+        isString(item, 'specimen_id');
+        required(item, 'make_specimen_id'); // UUID
+        isString(item, 'make_specimen_id');
+      });
+
+      isArray(newDoc, 'observations');
+      validateArrayItems(newDoc.observations, function(item) {
+        required(item, 'observation_id'); // UUID
+        isString(item, 'observation_id');
+      });
+
+      isArray(newDoc, 'attachments');
+      validateArrayItems(newDoc.attachments, function(item) {
+        required(item, 'attachment_id'); // UUID
+        isString(item, 'attachment_id');
+      });
+
+      break; // occurrence のチェック完了
+
+    /**
+     * マスターデータ: プロジェクト
+     */
+    case 'project':
+      required(newDoc, 'project_name');
+      isString(newDoc, 'project_name');
+
+      required(newDoc, 'members');
+      isArray(newDoc, 'members');
+      validateArrayItems(newDoc.members, function(item) {
+        required(item, 'project_member_id'); // UUID
+        isString(item, 'project_member_id');
+        required(item, 'user_id');
+        isString(item, 'user_id');
+      });
+      break; // project のチェック完了
+
+    /**
+     * マスターデータ: 標本手法
+     */
+    case 'specimen_method':
+      required(newDoc, 'method_common_name');
+      isString(newDoc, 'method_common_name');
+      required(newDoc, 'user_id'); // PG.user_id
+      isString(newDoc, 'user_id');
+      break; // specimen_method のチェック完了
+
+    /**
+     * マスターデータ: 観察手法
+     */
+    case 'observation_method':
+      required(newDoc, 'method_common_name');
+      isString(newDoc, 'method_common_name');
+      required(newDoc, 'user_id'); // PG.user_id
+      isString(newDoc, 'user_id');
+      break; // observation_method のチェック完了
+
+    /**
+     * マスターデータ: Wiki
+     */
+    case 'wiki':
+      required(newDoc, 'title');
+      isString(newDoc, 'title');
+      required(newDoc, 'content_path');
+      isString(newDoc, 'content_path');
+      required(newDoc, 'user_id'); // PG.user_id
+      isString(newDoc, 'user_id');
+      break; // wiki のチェック完了
+
+    /**
+     * 未知の type は通さない
+     */
+    default:
+      throwError('"' + newDoc.type + '" という type は許可されていない');
+  }
+
+  // --- すべてのチェックを通過 ---
+  // ここまでエラーが throw されなければ、保存を許可する
+}
