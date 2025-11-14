@@ -15,6 +15,7 @@ var ErrEmailAlreadyExists = errors.New("このメールアドレスは既に使�
 type UserRepository interface {
 	CreateUser(user *entity.User) (*entity.User, error)
 	FindUserByEmail(email string) (*entity.User, error)
+	FindUserByID(userID string) (*entity.User, error) // (今回追加)
 }
 
 // userRepository は UserRepository の実装なのだ
@@ -63,6 +64,21 @@ func (r *userRepository) FindUserByEmail(email string) (*entity.User, error) {
 	result := r.db.Where("mail_address = ?", email).First(&user)
 
 	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	return &user, nil
+}
+
+
+// FindUserByID はUserID でユーザーを1件検索する
+func (r *userRepository) FindUserByID(userID string) (*entity.User, error) {
+	var user entity.User
+	// GORM の First メソッド (主キー検索) を使う
+	result := r.db.First(&user, "user_id = ?", userID)
+
+	if result.Error != nil {
+		// (gorm.ErrRecordNotFound もここに含まれる)
 		return nil, result.Error
 	}
 

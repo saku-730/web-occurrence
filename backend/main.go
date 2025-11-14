@@ -12,40 +12,47 @@ import (
 	"github.com/joho/godotenv"
 )
 
+
 func main() {
 	// 1. 環境変数を .env ファイルから読み込む
 	if os.Getenv("GIN_MODE") != "release" {
-		err := godotenv.Load() // .env ファイルを読み込む
+		err := godotenv.Load()
 		if err != nil {
 			log.Println("警告: .env ファイルが読み込めませんでした。")
 		}
 	}
 
 	// 2. データベース接続 (infrastructure)
-	// gorm.DB (*db) と sql.DB (*sqlDB) の両方を受け取るように変更
 	db, sqlDB := infrastructure.InitDB()
-	// main関数終了時にDB接続を閉じるのは *sqlDB の方を使うのだ
-	defer sqlDB.Close() 
+	defer sqlDB.Close()
 
 	// 3. 依存性注入 (DI)
-	// Repository層 (DB接続は *gorm.DB の方を渡す)
+
+
+	// --- Infrastructure層 ---
+	couchClient := infrastructure.NewCouchDBClient()
+	
+	// --- Repository層 ---
 	userRepo := repository.NewUserRepository(db)
+	
+	// --- Service層 ---
+	// UserService に userRepo と couchClient の両方を渡す
+	userService := service.NewUserService(userRepo, couchClient) 
+	couchDBService := service.NewCouchDBService(userRepo, couchClient)
 
-	// Service層 (Repositoryを渡す)
-	userService := service.NewUserService(userRepo)
-
-	// Handler層 (Serviceを渡す)
+	// --- Handler層 ---
 	userHandler := handler.NewUserHandler(userService)
+	couchDBHandler := handler.NewCouchDBHandler(couchDBService)
+
+
 
 	// 4. ルーターの設定 (Handlerを渡す)
-	r := router.SetupRouter(
-		userHandler,
-	)
+	r := router.SetupRouter(userHandler, couchDBHandler)
 
 	// 5. サーバー起動
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // デフォルトポート
+		port = "8080"
 	}
 	log.Printf("サーバーを起動中 (http://localhost:%s)...", port)
 	r.Run(":" + port)

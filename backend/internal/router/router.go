@@ -2,22 +2,37 @@ package router
 
 import (
 	"github.com/saku-730/web-occurrence/backend/internal/handler"
+	"github.com/saku-730/web-occurrence/backend/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-// SetupRouter は Gin のルーターを設定するのだ
-func SetupRouter(userHandler *handler.UserHandler) *gin.Engine {
+
+func SetupRouter(
+	userHandler *handler.UserHandler,
+	couchDBHandler *handler.CouchDBHandler, // (今回追加)
+) *gin.Engine {
 	r := gin.Default()
 
-	// APIのグループ
-	api := r.Group("/api")
+	// --- Public API グループ (認証不要) ---
+	apiPublic := r.Group("/api")
 	{
 		// ユーザー登録エンドポイント
-		// POST /api/register
-		api.POST("/register", userHandler.Register)
-		
-		api.POST("/login", userHandler.Login)
+		apiPublic.POST("/register", userHandler.Register)
+
+		// ログインエンドポイント
+		apiPublic.POST("/login", userHandler.Login)
+	}
+
+	// --- Protected API グループ (認証ミドルウェアを使用)  ---
+	apiProtected := r.Group("/api")
+	apiProtected.Use(middleware.AuthMiddleware()) // ★このグループはJWT認証が必須
+	{
+		// CouchDBセッション発行エンドポイント
+		// GET /api/couchdb-session
+		apiProtected.GET("/couchdb-session", couchDBHandler.GetCouchDBSession)
+
+		// (ここに /api/upload-image などの認証必須APIを追加していく)
 	}
 
 	return r

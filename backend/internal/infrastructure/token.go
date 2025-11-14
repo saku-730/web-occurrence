@@ -8,27 +8,50 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// GenerateToken はユーザーIDを元にJWT（通行証）を生成するのだ
 func GenerateToken(userID string) (string, error) {
-	// JWTに含める情報（Claims）
 	claims := jwt.MapClaims{}
 	claims["authorized"] = true
 	claims["user_id"] = userID
-	claims["exp"] = time.Now().Add(time.Hour * 24).Unix() // 有効期限: 24時間
+	claims["exp"] = time.Now().Add(time.Hour * 24).Unix() 
 
-	// ヘッダーとペイロードを生成
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		return "", fmt.Errorf("JWT_SECRET が設定されていません")
+	}
+	tokenString, err := token.SignedString([]byte(secret))
+	if err != nil {
+		return "", fmt.Errorf("トークンの署名に失敗しました: %v", err)
+	}
+	return tokenString, nil
+}
 
-	// 秘密鍵（.envから取得）で署名する
+func ValidateAndExtractUserID(tokenString string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return "", fmt.Errorf("JWT_SECRET が設定されていません")
 	}
 
-	tokenString, err := token.SignedString([]byte(secret))
+	// トークンをパース（解析）する
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// 署名方法がHS256であることを確認
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("予期しない署名方法です: %v", token.Header["alg"])
+		}
+		return []byte(secret), nil
+	})
+
 	if err != nil {
-		return "", fmt.Errorf("トークンの署名に失敗しました: %v", err)
+		return "", err // (有効期限切れなどもここに含まれる)
 	}
 
-	return tokenString, nil
+	// トークンが有効で、中身（Claims）がMapClaims形式かチェック
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		// "user_id" を取り出す
+		if userID, ok := claims["user_id"].(string); ok {
+			return userID, nil
+		}
+	}
+
+	return "", fmt.Errorf("無効なトークンです")
 }

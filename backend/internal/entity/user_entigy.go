@@ -6,7 +6,7 @@ import "time"
 // GORM用の struct tags (`gorm:"..."`) を追加したのだ
 type User struct {
 	// PostgreSQL側で pgcrypto の gen_random_uuid() を使う想定なのだ
-	UserID       string    `json:"user_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
+	UserID       int64    `json:"user_id" gorm:"primaryKey;type:uuid;default:gen_random_uuid()"`
 	UserName     string    `json:"user_name" gorm:"column:user_name"`
 	DisplayName  string    `json:"display_name" gorm:"column:display_name"`
 	MailAddress  string    `json:"mail_address" gorm:"column:mail_address;unique"` // メールアドレスはユニーク制約

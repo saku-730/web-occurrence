@@ -10,7 +10,7 @@ type UserRegisterRequest struct {
 
 // UserRegisterResponse はユーザー登録APIの成功レスポンスなのだ
 type UserRegisterResponse struct {
-	UserID      string    `json:"user_id"`
+	UserID      int64    `json:"user_id"`
 	UserName    string    `json:"user_name"`
 	DisplayName string    `json:"display_name"`
 	MailAddress string    `json:"mail_address"`
