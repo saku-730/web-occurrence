@@ -2,11 +2,11 @@ package main
 
 import (
 	"log"
-	"occurrence-web-1/internal/handler"      // (sのプロジェクト名)
-	"myapp/infrastructure" // (sのプロジェクト名)
-	"myapp/repository"   // (sのプロジェクト名)
-	"myapp/router"       // (sのプロジェクト名)
-	"myapp/service"      // (sのプロジェクト名)
+	"github.com/saku-730/web-occurrence/backend/handler"
+	"github.com/saku-730/web-occurrence/backend/infrastructure"
+	"github.com/saku-730/web-occurrence/backend/repository"
+	"github.com/saku-730/web-occurrence/backend/router"
+	"github.com/saku-730/web-occurrence/backend/service"
 	"os"
 
 	"github.com/joho/godotenv"
