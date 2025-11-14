@@ -1,7 +1,7 @@
 package router
 
 import (
-	"github.com/saku-730/web-occurrence/backend/handler"
+	"github.com/saku-730/web-occurrence/backend/internal/handler"
 
 	"github.com/gin-gonic/gin"
 )

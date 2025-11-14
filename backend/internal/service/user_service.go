@@ -1,24 +1,21 @@
 package service
 
 import (
-	"github.com/saku-730/web-occurrence/backend/entity"
-	"github.com/saku-730/web-occurrence/backend/infrastructure"
-	"github.com/saku-730/web-occurrence/backend/model"
-	"github.com/saku-730/web-occurrence/backend/repository"
+	"github.com/saku-730/web-occurrence/backend/internal/entity"
+	"github.com/saku-730/web-occurrence/backend/internal/infrastructure"
+	"github.com/saku-730/web-occurrence/backend/internal/model"
+	"github.com/saku-730/web-occurrence/backend/internal/repository"
 	"strings"
 )
 
-// UserService はビジネスロジックのインターフェースなのだ
 type UserService interface {
 	RegisterUser(req *model.UserRegisterRequest) (*entity.User, error)
 }
 
-// userService は UserService の実装なのだ
 type userService struct {
 	userRepo repository.UserRepository
 }
 
-// NewUserService は userService のインスタンスを生成するのだ
 func NewUserService(userRepo repository.UserRepository) UserService {
 	return &userService{userRepo: userRepo}
 }

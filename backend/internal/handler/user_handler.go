@@ -1,8 +1,8 @@
 package handler
 
 import (
-	"github.com/saku-730/web-occurrence/backend/model"
-	"github.com/saku-730/web-occurrence/backend/service"
+	"github.com/saku-730/web-occurrence/backend/internal/model"
+	"github.com/saku-730/web-occurrence/backend/internal/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +32,6 @@ func (h *UserHandler) Register(c *gin.Context) {
 	// 2. Service を呼び出してビジネスロジックを実行
 	createdUser, err := h.userService.RegisterUser(&req)
 	if err != nil {
-		// (本当はここでエラーの種類を判別してステータスコードを変えるべき)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

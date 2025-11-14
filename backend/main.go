@@ -2,11 +2,11 @@ package main
 
 import (
 	"log"
-	"github.com/saku-730/web-occurrence/backend/handler"
-	"github.com/saku-730/web-occurrence/backend/infrastructure"
-	"github.com/saku-730/web-occurrence/backend/repository"
-	"github.com/saku-730/web-occurrence/backend/router"
-	"github.com/saku-730/web-occurrence/backend/service"
+	"github.com/saku-730/web-occurrence/backend/internal/handler"
+	"github.com/saku-730/web-occurrence/backend/internal/infrastructure"
+	"github.com/saku-730/web-occurrence/backend/internal/repository"
+	"github.com/saku-730/web-occurrence/backend/internal/router"
+	"github.com/saku-730/web-occurrence/backend/internal/service"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -38,7 +38,9 @@ func main() {
 	userHandler := handler.NewUserHandler(userService)
 
 	// 4. ルーターの設定 (Handlerを渡す)
-	r := router.SetupRouter(userHandler)
+	r := router.SetupRouter(
+		userHandler,
+	)
 
 	// 5. サーバー起動
 	port := os.Getenv("PORT")

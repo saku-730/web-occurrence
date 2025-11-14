@@ -2,7 +2,7 @@ package repository
 
 import (
 	// "database/sql" // 標準ライブラリは不要になったのだ
-	"github.com/saku-730/web-occurrence/backend/entity"
+	"github.com/saku-730/web-occurrence/backend/internal/entity"
 
 	"gorm.io/gorm" // GORMをインポート
 )
@@ -27,7 +27,7 @@ func NewUserRepository(db *gorm.DB) UserRepository {
 // CreateUser は users テーブルに新しいユーザーを挿入するのだ (GORM版)
 func (r *userRepository) CreateUser(user *entity.User) (*entity.User, error) {
 	// タイムゾーンはService層から渡されたもの（またはここで設定）
-	user.Timezone = "UTC" 
+	user.Timezone = "9" 
 
 	// GORMの Create メソッドを使うのだ
 	// userポインタを渡すと、GORMが自動でSQLのINSERT文を生成する。

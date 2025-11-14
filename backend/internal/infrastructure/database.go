@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/lib/pq" // GORMは内部でこれを使うのだ
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
