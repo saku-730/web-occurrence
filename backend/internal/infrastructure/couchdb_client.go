@@ -71,7 +71,7 @@ func (c *couchDBClient) GetSessionCookie(username string) (string, error) {
 	return "", fmt.Errorf("CouchDBのレスポンスに AuthSession が見つかりません")
 }
 
-// CreateCouchDBUser は CouchDB の _users データベースにユーザーを新規作成するのだ (今回追加)
+// CreateCouchDBUser は CouchDB の _users データベースにユーザーを新規作成する
 func (c *couchDBClient) CreateCouchDBUser(username string, password string) error {
 	
 	// 1. CouchDBが要求するユーザードキュメントの形式でJSONを作成
