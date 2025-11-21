@@ -30,7 +30,8 @@ func SetupRouter(
 	{
 		// CouchDBセッション発行エンドポイント
 		// GET /api/couchdb-session
-		apiProtected.GET("/couchdb-session", couchDBHandler.GetCouchDBSession)
+		//apiProtected.GET("/couchdb-session", couchDBHandler.GetCouchDBSession)
+		apiProtected.Any("/couchdb/*path", couchDBHandler.ProxyRequest)
 
 		// (ここに /api/upload-image などの認証必須APIを追加していく)
 	}
