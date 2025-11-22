@@ -32,7 +32,7 @@ func SetupRoutes(
 		apiProtected.GET("/users/me", userHandler.GetMe)
 		
 		apiProtected.POST("/workstation/create", workstationHandler.Create)
-		apiProtected.GET("/workstations", workstationHandler.List) // /api/my-workstations と合わせるか検討が必要だが、一旦Handler定義に従う
+		apiProtected.GET("/my-workstations", workstationHandler.List) // /api/my-workstations と合わせるか検討が必要だが、一旦Handler定義に従う
 		
 		// フロントエンドからのリクエストに合わせてエンドポイントを追加・調整する場合はここで行うのだ
 		// 例: apiProtected.GET("/my-workstations", workstationHandler.List) 

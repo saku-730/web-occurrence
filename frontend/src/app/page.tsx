@@ -96,8 +96,8 @@ export default function Home() {
           {/* 新規作成カード */}
           <Link href="/create" className="block group">
             <div className="bg-white p-6 rounded-xl shadow-sm border-2 border-dashed border-gray-300 hover:border-green-500 transition-colors h-full flex flex-col items-center justify-center min-h-[200px]">
-              <span className="text-4xl text-gray-400 group-hover:text-green-500 mb-2">+</span>
-              <span className="font-bold text-gray-500 group-hover:text-green-600">新規データ登録</span>
+              <span className="text-4xl text-black group-hover:text-green-500 mb-2">+</span>
+              <span className="font-bold text-black group-hover:text-green-600">新規データ登録</span>
             </div>
           </Link>
 
@@ -105,7 +105,7 @@ export default function Home() {
           {/* 今回は省略するが、usePouchDBSyncと同じ要領で allDocs を取得して表示する */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <h2 className="font-bold mb-2">最近のデータ</h2>
-            <p className="text-sm text-gray-500">ここに登録済みデータが表示されます。</p>
+            <p className="text-sm text-black">ここに登録済みデータが表示されます。</p>
           </div>
         </div>
       </main>

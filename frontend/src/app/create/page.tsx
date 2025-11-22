@@ -136,7 +136,7 @@ export default function CreateOccurrencePage() {
   if (!currentWS) return <div>Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-8 text-black">
       <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm">
         <h1 className="text-2xl font-bold mb-6">新規データ登録</h1>
         <p className="text-sm text-gray-500 mb-4">
