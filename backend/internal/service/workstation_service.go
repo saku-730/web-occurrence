@@ -12,7 +12,6 @@ import (
 
 type WorkstationService interface {
 	CreateWorkstation(userID string, req *model.CreateWorkstationRequest) (*entity.Workstation, error)
-	// ▼ 追加
 	GetMyWorkstations(userID string) ([]entity.Workstation, error)
 }
 
@@ -54,8 +53,12 @@ func (s *workstationService) CreateWorkstation(userIDStr string, req *model.Crea
 	fileExts, _ := s.masterRepo.GetAllFileExtensions()
 	roles, _ := s.masterRepo.GetAllUserRoles()
 	
-	users := []entity.WorkstationUser{
-		{UserID: userID, DisplayName: "Current User"},
+	// 修正: entity.WorkstationUser型を使わず、CouchDB保存用のMapスライスにする
+	users := []map[string]interface{}{
+		{
+			"user_id":      userID,
+			"display_name": "Current User", // ※本来はDBからユーザー名を取得すべきだけど、今は固定値で回避
+		},
 	}
 
 	docID := "_local/master_data" 
@@ -79,7 +82,6 @@ func (s *workstationService) CreateWorkstation(userIDStr string, req *model.Crea
 	return createdWS, nil
 }
 
-// ▼ 追加: 自分のワークステーション一覧
 func (s *workstationService) GetMyWorkstations(userIDStr string) ([]entity.Workstation, error) {
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
 	if err != nil {

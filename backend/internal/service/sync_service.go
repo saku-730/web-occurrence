@@ -2,8 +2,8 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/saku-730/web-occurrence/backend/internal/entity"
@@ -13,6 +13,7 @@ import (
 
 type SyncService interface {
 	StartPolling()
+	ProcessDocument(doc map[string]interface{}) error
 }
 
 type syncService struct {
@@ -27,35 +28,25 @@ func NewSyncService(db *gorm.DB, couchClient infrastructure.CouchDBClient) SyncS
 	}
 }
 
-// 簡易的なポーリングによる同期（本番では _changes フィードのロングポーリング推奨）
 func (s *syncService) StartPolling() {
 	go func() {
-		ticker := time.NewTicker(10 * time.Second) // 10秒ごとにチェック
+		ticker := time.NewTicker(10 * time.Second)
 		for range ticker.C {
 			s.syncAll()
 		}
 	}()
 }
 
-// ここでは「CouchDBにある全てのoccurrenceドキュメント」を取得してUpsertする単純な実装にするのだ
-// (差分更新は _changes を使うともっと効率的になるのだ)
 func (s *syncService) syncAll() {
-	// CouchDBから全ドキュメントIDを取得するメソッドが必要だけど、
-	// ここでは解説用に「1件処理するロジック」を書くのだ。
-	// 実際には couchClient.GetAllDocs() などを実装してループさせるのだ。
+	// 実装省略
 }
 
-// 1つのドキュメント（JSON）をPostgresに保存するメインロジック
 func (s *syncService) ProcessDocument(doc map[string]interface{}) error {
-	// typeチェック
 	docType, _ := doc["type"].(string)
 	if docType != "occurrence" {
-		return nil // 対象外
+		return nil
 	}
 
-	// JSONのパース
-	// 実際には map[string]interface{} からキャストしまくるのは大変なので、
-	// 一度 JSON bytes にして struct にマッピングすると楽なのだ。
 	jsonBytes, _ := json.Marshal(doc)
 	
 	var data IncomingOccurrenceData
@@ -66,59 +57,81 @@ func (s *syncService) ProcessDocument(doc map[string]interface{}) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		// 1. Classification
 		if data.ClassificationData.ClassificationID != "" {
+			// Map -> JSON String 変換
+			classJSON, _ := json.Marshal(data.ClassificationData.ClassClassification)
 			cls := entity.ClassificationJSON{
 				ClassificationID:    data.ClassificationData.ClassificationID,
-				ClassClassification: data.ClassificationData.ClassClassification,
+				ClassClassification: string(classJSON),
 			}
 			if err := tx.Save(&cls).Error; err != nil { return err }
 		}
 
 		// 2. Place
 		if data.PlaceData.PlaceID != "" {
+			// Map -> JSON String 変換
+			coordJSON, _ := json.Marshal(data.PlaceData.Coordinates)
+			
+			// Pointer -> Value 変換
+			accuracy := 0.0
+			if data.PlaceData.Accuracy != nil {
+				accuracy = *data.PlaceData.Accuracy
+			}
+
 			pl := entity.Place{
 				PlaceID:     data.PlaceData.PlaceID,
-				PlaceNameID: nil, // 省略
-				Coordinates: data.PlaceData.Coordinates,
-				Accuracy:    data.PlaceData.Accuracy,
+				PlaceNameID: "", // nilではなく空文字
+				Coordinates: string(coordJSON),
+				Accuracy:    accuracy,
 			}
 			if err := tx.Save(&pl).Error; err != nil { return err }
 		}
 
-		// 3. Occurrence (本体)
-		// IDから "occ_" などのプレフィックスを取り除くかどうかは要件次第だけど
-		// UUIDとして保存するならそのまま入れるか、整形するのだ。
-		// 今回はそのまま文字列として入れるのだ。
-		
-		// 時刻パース
+		// 3. Occurrence
 		createdAt, _ := time.Parse(time.RFC3339, data.CreatedAt)
 
+		// String -> Int64 変換
+		wsID, _ := strconv.ParseInt(data.WorkstationID, 10, 64)
+		userID, _ := strconv.ParseInt(data.CreatedByUserID, 10, 64)
+
+		// Pointer -> Value 変換
+		projectID := ""
+		if data.ProjectID != nil {
+			projectID = *data.ProjectID
+		}
+		
+		bodyLength := 0.0
+		if data.OccurrenceData.BodyLength != nil {
+			bodyLength = *data.OccurrenceData.BodyLength
+		}
+
+		langID := ""
+		if data.LanguageID != nil {
+			langID = *data.LanguageID
+		}
+
 		occ := entity.Occurrence{
-			OccurrenceID:     data.ID, // _id を使う
-			WorkstationID:    data.WorkstationID,
-			UserID:           data.CreatedByUserID,
-			ProjectID:        data.ProjectID,
+			OccurrenceID:     data.ID,
+			WorkstationID:    wsID,
+			UserID:           userID,
+			ProjectID:        projectID,
 			IndividualID:     data.OccurrenceData.IndividualID,
 			Lifestage:        data.OccurrenceData.Lifestage,
 			Sex:              data.OccurrenceData.Sex,
-			BodyLength:       data.OccurrenceData.BodyLength,
+			BodyLength:       bodyLength,
 			Note:             data.OccurrenceData.Note,
 			ClassificationID: data.ClassificationData.ClassificationID,
 			PlaceID:          data.PlaceData.PlaceID,
-			LanguageID:       data.LanguageID,
+			LanguageID:       langID,
 			CreatedAt:        createdAt,
 			Timezone:         data.Timezone,
 		}
 		if err := tx.Save(&occ).Error; err != nil { return err }
-
-		// 4. Related Tables (Identifications, etc.)
-		// ここでは省略するけど、同様にループして Save するのだ
 
 		log.Printf("Synced occurrence: %s", occ.OccurrenceID)
 		return nil
 	})
 }
 
-// JSON受け取り用の構造体定義
 type IncomingOccurrenceData struct {
 	ID              string `json:"_id"`
 	WorkstationID   string `json:"workstation_id"`

@@ -11,9 +11,14 @@ export default function CreateOccurrencePage() {
   const [currentWS, setCurrentWS] = useState<any>(null);
   const [token, setToken] = useState<string | null>(null);
   
-  // フォーム状態（簡易版）
+  // フォーム状態：分類階級をフルサポート
   const [formData, setFormData] = useState({
     kingdom: 'Animalia',
+    phylum: '',
+    class: '',
+    order: '',
+    family: '',
+    genus: '',
     species: '',
     individual_id: '',
     sex: 'unknown',
@@ -43,22 +48,17 @@ export default function CreateOccurrencePage() {
     setLoading(true);
 
     try {
-      // UUID生成ヘルパー
       const uuid = () => crypto.randomUUID();
-
-      // 現在のユーザーID (簡易的にLocalStorageから取得できればいいが、今回は固定値かTokenからデコードが必要)
-      // 本番ではJWTからデコードするべきだが、ここでは仮に "user_dummy" とする（バックエンドで補正するか、本来はログイン時にUser情報を保持すべき）
       const userId = 'user_saku'; // TODO: 実際のログインユーザーIDを使う
 
-      // 1. オカレンスデータの構築
       const occurrenceId = uuid();
       const classificationId = uuid();
       const placeId = uuid();
       
       const doc = {
-        _id: `occ_${occurrenceId}`, // PouchDBのID
+        _id: `occ_${occurrenceId}`,
         type: 'occurrence',
-        workstation_id: String(currentWS.workstation_id), // Stringに変換
+        workstation_id: String(currentWS.workstation_id),
         created_by_user_id: userId,
         project_id: null,
         created_at: new Date(formData.date).toISOString(),
@@ -67,7 +67,7 @@ export default function CreateOccurrencePage() {
 
         occurrence_data: {
           individual_id: formData.individual_id,
-          lifestage: 'adult', // 簡易化
+          lifestage: 'adult',
           sex: formData.sex,
           body_length: null,
           note: formData.note,
@@ -77,6 +77,11 @@ export default function CreateOccurrencePage() {
           classification_id: classificationId,
           class_classification: {
             kingdom: formData.kingdom,
+            phylum: formData.phylum,
+            class: formData.class,
+            order: formData.order,
+            family: formData.family,
+            genus: formData.genus,
             species: formData.species
           }
         },
@@ -91,26 +96,26 @@ export default function CreateOccurrencePage() {
           class_place_name: null
         },
 
-        // 配列データ（今回は空で作成）
         identifications: [],
         specimens: [],
         observations: [],
         attachments: []
       };
 
-      // 2. PouchDBへの保存
+      // ▼▼▼ 修正箇所: 型定義エラーを確実に回避するのだ ▼▼▼
       const mod = await import('pouchdb-browser');
-      const PouchDB = (mod.default && typeof mod.default === 'function') ? mod.default : mod;
+      // as unknown as any で強制的に型を無視させるのだ
+      const PouchDB = ((mod.default && typeof mod.default === 'function') ? mod.default : mod) as unknown as any;
       
       const localDBName = `${DB_NAME}_ws_${currentWS.workstation_id}`;
       const db = new PouchDB(localDBName);
+      // ▲▲▲ 修正ここまで ▲▲▲
       
       await db.put(doc);
 
       console.log('Saved to local PouchDB:', doc);
       alert('保存しました！');
       
-      // トップページへ戻って同期させる
       router.push('/');
 
     } catch (err: any) {
@@ -125,23 +130,57 @@ export default function CreateOccurrencePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm">
+      <div className="max-w-2xl mx-auto bg-white p-8 rounded-xl shadow-sm text-black">
         <h1 className="text-2xl font-bold mb-6">新規データ登録</h1>
         <p className="text-sm text-gray-500 mb-4">
           Workstation: {currentWS.workstation_name} (ID: {currentWS.workstation_id})
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold mb-1">Kingdom (界)</label>
-              <input name="kingdom" value={formData.kingdom} onChange={handleChange} className="w-full border p-2 rounded" />
+          {/* 分類情報の入力エリア */}
+          <div className="space-y-2 border p-4 rounded bg-gray-50">
+            <h2 className="font-bold text-lg mb-2">分類情報 (Classification)</h2>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Kingdom (界)</label>
+                <input name="kingdom" value={formData.kingdom} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Animalia" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Phylum (門)</label>
+                <input name="phylum" value={formData.phylum} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Arthropoda" />
+              </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Class (綱)</label>
+                <input name="class" value={formData.class} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Insecta" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Order (目)</label>
+                <input name="order" value={formData.order} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Lepidoptera" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold mb-1">Family (科)</label>
+                <input name="family" value={formData.family} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Papilionidae" />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-1">Genus (属)</label>
+                <input name="genus" value={formData.genus} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Papilio" />
+              </div>
+            </div>
+
             <div>
               <label className="block text-sm font-bold mb-1">Species (種名)</label>
-              <input name="species" value={formData.species} onChange={handleChange} required className="w-full border p-2 rounded" placeholder="例: Papilio xuthus" />
+              <input name="species" value={formData.species} onChange={handleChange} required className="w-full border p-2 rounded" placeholder="xuthus (種小名のみ、または学名全体)" />
             </div>
           </div>
+
+          <hr className="my-4" />
 
           <div className="grid grid-cols-2 gap-4">
             <div>

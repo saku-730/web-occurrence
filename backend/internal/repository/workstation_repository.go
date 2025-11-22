@@ -33,7 +33,7 @@ func (r *workstationRepository) AddUserToWorkstation(userID, workstationID int64
 	link := entity.WorkstationUser{
 		UserID:        userID,
 		WorkstationID: workstationID,
-		RoleID:        roleID,
+		RoleID:        int(roleID), // ★ここで int64 -> int にキャストしたのだ
 	}
 	return r.db.Create(&link).Error
 }
