@@ -12,6 +12,8 @@ import (
 
 type WorkstationService interface {
 	CreateWorkstation(userID string, req *model.CreateWorkstationRequest) (*entity.Workstation, error)
+	// ▼ 追加
+	GetMyWorkstations(userID string) ([]entity.Workstation, error)
 }
 
 type workstationService struct {
@@ -35,7 +37,6 @@ func NewWorkstationService(
 func (s *workstationService) CreateWorkstation(userIDStr string, req *model.CreateWorkstationRequest) (*entity.Workstation, error) {
 	userID, _ := strconv.ParseInt(userIDStr, 10, 64)
 
-	// 1. PostgreSQLにワークステーションを作成
 	newWS := &entity.Workstation{
 		WorkstationName: req.WorkstationName,
 	}
@@ -44,33 +45,23 @@ func (s *workstationService) CreateWorkstation(userIDStr string, req *model.Crea
 		return nil, err
 	}
 
-	// 2. 作成者を管理者として紐付け (RoleID=1: adminと仮定)
 	if err := s.wsRepo.AddUserToWorkstation(userID, createdWS.WorkstationID, 1); err != nil {
 		return nil, err
 	}
-
-	// 3. CouchDBにマスターデータを投入
-	// 本来はワークステーションごとにデータを分けるかIDで区別するが、
-	// 今回は単一DBで _local/master_data を使う要件なので、それを更新する。
-	// ※ 複数WSがある場合、_local/master_data をどう共有するかは要検討だけど、
-	//    一旦は「作成時にマスターデータを初期化/更新する」という挙動にするのだ。
 
 	languages, _ := s.masterRepo.GetAllLanguages()
 	fileTypes, _ := s.masterRepo.GetAllFileTypes()
 	fileExts, _ := s.masterRepo.GetAllFileExtensions()
 	roles, _ := s.masterRepo.GetAllUserRoles()
 	
-	// 所属ユーザー一覧を取得（今は作成者だけ）
-	// 本当は wsRepo.GetUsersByWorkstationID みたいなメソッドが必要だけど簡易的に作成
 	users := []entity.WorkstationUser{
-		{UserID: userID, DisplayName: "Current User"}, // 名前はUserRepoから引くべき
+		{UserID: userID, DisplayName: "Current User"},
 	}
 
 	docID := "_local/master_data" 
 	docData := map[string]interface{}{
 		"_id":                docID,
 		"type":               "master_data",
-		// どのワークステーションのデータか区別するためのIDを入れるのもあり
 		"workstation_id":     fmt.Sprintf("%d", createdWS.WorkstationID), 
 		"data": map[string]interface{}{
 			"languages":         languages,
@@ -82,9 +73,17 @@ func (s *workstationService) CreateWorkstation(userIDStr string, req *model.Crea
 	}
 
 	if err := s.couchClient.UpsertDocument(docID, docData); err != nil {
-		// ログ出すだけにしておく
 		fmt.Printf("Failed to init CouchDB master data: %v\n", err)
 	}
 
 	return createdWS, nil
+}
+
+// ▼ 追加: 自分のワークステーション一覧
+func (s *workstationService) GetMyWorkstations(userIDStr string) ([]entity.Workstation, error) {
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return s.wsRepo.GetWorkstationsByUserID(userID)
 }

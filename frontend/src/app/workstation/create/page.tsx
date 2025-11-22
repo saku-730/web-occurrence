@@ -54,7 +54,7 @@ export default function CreateWorkstationPage() {
               type="text"
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black transition"
-              placeholder="例: つくば蝶類調査2025"
+              placeholder="例: つくばミミズ調査2025"
               value={wsName}
               onChange={(e) => setWsName(e.target.value)}
             />

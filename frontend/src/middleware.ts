@@ -20,9 +20,10 @@ export function middleware(request: NextRequest) {
   }
 
   // B. すでにトークンがあるのに、ログイン画面や登録画面にアクセスした場合
-  // -> トップページ（ダッシュボード）へ転送（親切設計）
+  // -> ワークステーション選択画面へ転送（親切設計）
   if (token && isPublicPath) {
-    return NextResponse.redirect(new URL('/', request.url));
+    // ▼ 変更: / -> /workstation
+    return NextResponse.redirect(new URL('/workstation', request.url));
   }
 
   // 何もなければそのまま通過させる

@@ -10,7 +10,8 @@ type MasterRepository interface {
 	GetAllFileTypes() ([]model.FileType, error)
 	GetAllFileExtensions() ([]model.FileExtension, error)
 	GetAllUserRoles() ([]model.UserRole, error)
-	GetAllWorkstationUsers() ([]model.WorkstationUser, error)
+	// ▼ 変更: 全件取得をやめて、ワークステーション指定で取得するメソッドにするのだ
+	GetUsersByWorkstationID(workstationID int64) ([]model.WorkstationUser, error)
 }
 
 type masterRepository struct {
@@ -45,9 +46,17 @@ func (r *masterRepository) GetAllUserRoles() ([]model.UserRole, error) {
 	return list, err
 }
 
-func (r *masterRepository) GetAllWorkstationUsers() ([]model.WorkstationUser, error) {
+// ▼ 追加実装: 指定されたワークステーションに所属するユーザーのみを取得
+func (r *masterRepository) GetUsersByWorkstationID(workstationID int64) ([]model.WorkstationUser, error) {
 	var list []model.WorkstationUser
-	// usersテーブルから必要なカラムだけ取得
-	err := r.db.Table("users").Select("user_id, display_name").Find(&list).Error
+	
+	// workstation_user テーブルと users テーブルを JOIN して、
+	// そのワークステーションに紐付いているユーザーだけを抽出するのだ
+	err := r.db.Table("users").
+		Select("users.user_id, users.display_name").
+		Joins("JOIN workstation_user ON users.user_id = workstation_user.user_id").
+		Where("workstation_user.workstation_id = ?", workstationID).
+		Find(&list).Error
+		
 	return list, err
 }

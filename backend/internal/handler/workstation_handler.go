@@ -37,3 +37,20 @@ func (h *WorkstationHandler) Create(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, ws)
 }
+
+// ▼ 追加: 一覧取得 API
+func (h *WorkstationHandler) List(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	list, err := h.wsService.GetMyWorkstations(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, list)
+}

@@ -17,7 +17,11 @@ func NewMasterHandler(s service.MasterService) *MasterHandler {
 
 // GetMasterData はマスターデータをJSONで返すのだ
 func (h *MasterHandler) GetMasterData(c *gin.Context) {
-	data, err := h.masterService.GetMasterData()
+	// ミドルウェアでセットされた user_id を取得するのだ
+	userID := c.GetString("user_id")
+
+	// サービスに user_id を渡すように変更
+	data, err := h.masterService.GetMasterData(userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "マスターデータの取得に失敗: " + err.Error()})
 		return

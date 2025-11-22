@@ -26,7 +26,7 @@ export default function NewWorkstationPage() {
             </div>
             <h2 className="text-xl font-bold text-gray-800 mb-2">新しく作成する</h2>
             <p className="text-sm text-gray-500">
-              自分だけのデータベースを作成して、<br />ゼロからデータを記録します。
+              自分用のデータベースを作成して、<br />ゼロからデータを記録します。
             </p>
           </Link>
 

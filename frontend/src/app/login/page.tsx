@@ -3,8 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-// マスターデータ同期はトップページで行うので、ここではimport削除またはコメントアウト
-// import { fetchAndSaveMasterData } from '@/utils/syncMasterData';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -32,15 +30,17 @@ export default function LoginPage() {
 
       const data = await res.json();
 
+      // --- 保存処理 ---
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('user_email', email);
+
       document.cookie = `auth_token=${data.token}; path=/; max-age=86400; SameSite=Lax`;
 
       window.dispatchEvent(new Event('auth-change'));
       setStatus('ログイン成功！');
       
-      // ★修正: ワークステーション選択画面へ移動するのだ
-      router.push('/workstation/new');
+      // ▼ 変更: ダッシュボードではなく、ワークステーション選択画面へ移動
+      router.push('/workstation');
 
     } catch (err: any) {
       setStatus(`エラー: ${err.message}`);
