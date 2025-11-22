@@ -10,7 +10,8 @@ import (
 
 func SetupRouter(
 	userHandler *handler.UserHandler,
-	couchDBHandler *handler.CouchDBHandler, // (今回追加)
+	couchDBHandler *handler.CouchDBHandler,
+	masterHandler *handler.MasterHandler,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -33,7 +34,7 @@ func SetupRouter(
 		//apiProtected.GET("/couchdb-session", couchDBHandler.GetCouchDBSession)
 		apiProtected.Any("/couchdb/*path", couchDBHandler.ProxyRequest)
 
-		// (ここに /api/upload-image などの認証必須APIを追加していく)
+		apiProtected.GET("/master-data", masterHandler.GetMasterData)
 	}
 
 	return r

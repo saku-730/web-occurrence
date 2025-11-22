@@ -52,17 +52,20 @@ export default function HeaderUserArea() {
   const handleLogout = () => {
     if (!confirm('ログアウトしますか？')) return;
     
+    // 1. LocalStorage削除
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user_email');
+
+    // 2. Cookie削除 (有効期限を過去にして上書き) ★追加
+    document.cookie = "auth_token=; path=/; max-age=0";
     
-    // イベントを発火して通知
+    // 3. イベント通知
     window.dispatchEvent(new Event('auth-change'));
     
-    // ページをリロードしてログイン画面に戻す
-    window.location.reload();
+    // 4. リロード (Middlewareが検知して /login に飛ばしてくれるはずなのだ)
+    window.location.href = '/login';
   };
 
-  // マウント前は何も表示しない
   if (!mounted) return null;
 
   return (

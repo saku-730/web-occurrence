@@ -156,8 +156,6 @@ function(newDoc, oldDoc, userCtx, secObj) {
      * マスターデータ: Wiki
      */
     case 'wiki':
-      required(newDoc, 'title');
-      isString(newDoc, 'title');
       required(newDoc, 'content_path');
       isString(newDoc, 'content_path');
       required(newDoc, 'user_id'); // PG.user_id

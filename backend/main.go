@@ -27,22 +27,23 @@ func main() {
 	couchURL := os.Getenv("COUCHDB_URL")
 	couchSecret := os.Getenv("COUCHDB_SECRET")
 
-	// DI (依存性注入)
+	// Repository
 	couchClient := infrastructure.NewCouchDBClient()
 	userRepo := repository.NewUserRepository(db)
+	masterRepo := repository.NewMasterRepository(db)
 	
-	// User Service
-	userService := service.NewUserService(userRepo, couchClient)
-	
-	// CouchDB Service (引数が増えたのだ！)
+	// Service
 	couchDBService := service.NewCouchDBService(userRepo, couchClient, couchSecret, couchURL)
+	userService := service.NewUserService(userRepo, couchClient)
+	masterService := service.NewMasterService(masterRepo)
 
 	// Handlers
 	userHandler := handler.NewUserHandler(userService)
 	couchDBHandler := handler.NewCouchDBHandler(couchDBService)
+	masterHandler := handler.NewMasterHandler(masterService)
 
 	// Router
-	r := router.SetupRouter(userHandler, couchDBHandler)
+	r := router.SetupRouter(userHandler, couchDBHandler, masterHandler)
 
 	// サーバー起動
 	port := os.Getenv("PORT")

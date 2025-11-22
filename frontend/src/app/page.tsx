@@ -1,17 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+// ログアウト時にCookieも消すためにimportが必要なのだ
+import { useRouter } from 'next/navigation';
 
-// バックエンド側のDB名と合わせるのだ
 const DB_NAME = process.env.NEXT_PUBLIC_DB_NAME || 'test_db';
 
 export default function Home() {
-  // --- 状態管理 ---
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('初期化中...');
-  const [isLoading, setIsLoading] = useState(false);
   const [docs, setDocs] = useState<any[]>([]);
   const [PouchDBClass, setPouchDBClass] = useState<any>(null);
 
@@ -25,10 +23,11 @@ export default function Home() {
         const savedToken = localStorage.getItem('auth_token');
         if (savedToken) {
           setToken(savedToken);
-          setStatus('自動ログインしました！同期中なのだ');
+          setStatus('同期準備完了');
           startSync(savedToken, mod.default);
         } else {
-          setStatus('未ログイン');
+          // Middlewareで弾かれるはずだけど、念のため
+          router.push('/login');
         }
       } catch (e) {
         console.error(e);
@@ -36,46 +35,7 @@ export default function Home() {
       }
     };
     loadPouchDB();
-  }, []);
-
-  // --- ログイン処理 ---
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!PouchDBClass) return;
-    setIsLoading(true);
-    setStatus('通信中...');
-
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mailaddress: email, password: password }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'ログイン失敗');
-      }
-
-      const data = await res.json();
-      
-      // ★ここが重要：情報を保存してイベントを発火
-      localStorage.setItem('auth_token', data.token);
-      localStorage.setItem('user_email', email); // メールアドレスを保存
-      
-      // ヘッダーに変更を通知する
-      window.dispatchEvent(new Event('auth-change'));
-
-      setToken(data.token);
-      setStatus('ログイン成功！');
-      startSync(data.token, PouchDBClass);
-
-    } catch (err: any) {
-      setStatus(`エラー: ${err.message}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [router]);
 
   // --- PouchDB 同期処理 ---
   const startSync = (jwt: string, PouchDB: any) => {
@@ -110,89 +70,52 @@ export default function Home() {
   };
 
   // --- 画面描画 ---
+  // ログインフォームの分岐を削除して、ダッシュボードだけにするのだ
+  if (!token) {
+    return <div className="min-h-screen flex items-center justify-center text-gray-500">読み込み中...</div>;
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto">
-      {!token ? (
-        /* === ログインフォーム === */
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-md mx-auto mt-10">
-          <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">ログイン</h2>
-          <form onSubmit={handleLogin} className="space-y-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-2">メールアドレス</label>
-              <input
-                type="email"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black transition"
-                placeholder="user@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-2">パスワード</label>
-              <input
-                type="password"
-                required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black transition"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            {status !== '未ログイン' && (
-              <p className="text-sm text-center text-gray-500">{status}</p>
+      <div className="space-y-6">
+        {/* ステータスバー */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center">
+          <div>
+            <p className="text-sm text-gray-500">Status</p>
+            <p className="font-bold text-green-600">{status}</p>
+          </div>
+        </div>
+
+        {/* アクションエリア */}
+        <div className="flex justify-end">
+          <button
+            onClick={addTestData}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm font-medium"
+          >
+            + データを追加
+          </button>
+        </div>
+
+        {/* データ一覧 */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
+            <h3 className="font-bold text-gray-700">データ一覧 ({docs.length})</h3>
+          </div>
+          <ul className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
+            {docs.length === 0 ? (
+              <li className="p-8 text-center text-gray-400">データがありません</li>
+            ) : (
+              docs.map((doc: any) => (
+                <li key={doc._id} className="p-4 hover:bg-gray-50 transition">
+                  <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all font-mono">
+                    {JSON.stringify(doc, null, 2)}
+                  </pre>
+                </li>
+              ))
             )}
-            <button
-              type="submit"
-              disabled={isLoading || !PouchDBClass}
-              className="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition duration-200 disabled:opacity-50 shadow-md"
-            >
-              {isLoading ? '処理中...' : 'ログイン'}
-            </button>
-          </form>
+          </ul>
         </div>
-      ) : (
-        /* === ダッシュボード画面 === */
-        <div className="space-y-6">
-          {/* ステータスバー */}
-          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center">
-            <div>
-              <p className="text-sm text-gray-500">Status</p>
-              <p className="font-bold text-green-600">{status}</p>
-            </div>
-          </div>
-
-          {/* アクションエリア */}
-          <div className="flex justify-end">
-            <button
-              onClick={addTestData}
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm font-medium"
-            >
-              + データを追加
-            </button>
-          </div>
-
-          {/* データ一覧 */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-bold text-gray-700">データ一覧 ({docs.length})</h3>
-            </div>
-            <ul className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
-              {docs.length === 0 ? (
-                <li className="p-8 text-center text-gray-400">データがありません</li>
-              ) : (
-                docs.map((doc: any) => (
-                  <li key={doc._id} className="p-4 hover:bg-gray-50 transition">
-                    <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all font-mono">
-                      {JSON.stringify(doc, null, 2)}
-                    </pre>
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
-        </div>
-      )}
+      </div>
     </div>
   );
 }
