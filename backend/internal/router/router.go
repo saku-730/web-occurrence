@@ -28,6 +28,8 @@ func SetupRoutes(
 	{
 		apiProtected.Any("/couchdb/*path", couchDBHandler.ProxyRequest)
 		apiProtected.GET("/master-data", masterHandler.GetMasterData)
+
+		apiProtected.GET("/users/me", userHandler.GetMe)
 		
 		apiProtected.POST("/workstation/create", workstationHandler.Create)
 		apiProtected.GET("/workstations", workstationHandler.List) // /api/my-workstations と合わせるか検討が必要だが、一旦Handler定義に従う

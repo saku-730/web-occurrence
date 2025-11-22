@@ -15,7 +15,7 @@ var ErrEmailAlreadyExists = errors.New("このメールアドレスは既に使�
 type UserRepository interface {
 	CreateUser(user *entity.User) (*entity.User, error)
 	FindUserByEmail(email string) (*entity.User, error)
-	FindUserByID(userID string) (*entity.User, error) // (今回追加)
+	FindUserByID(userID int64) (*entity.User, error) // (今回追加)
 }
 
 // userRepository は UserRepository の実装なのだ
@@ -44,10 +44,6 @@ func (r *userRepository) CreateUser(user *entity.User) (*entity.User, error) {
 		}
 
 
-
-
-		// GORMが提供する「キー重複エラー」かどうかを errors.Is でチェック
-		// これなら "23505" みたいなドライバ固有コードを知らなくていいのだ
 		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
 			return nil, ErrEmailAlreadyExists
 		}
@@ -72,7 +68,7 @@ func (r *userRepository) FindUserByEmail(email string) (*entity.User, error) {
 
 
 // FindUserByID はUserID でユーザーを1件検索する
-func (r *userRepository) FindUserByID(userID string) (*entity.User, error) {
+func (r *userRepository) FindUserByID(userID int64) (*entity.User, error) {
 	var user entity.User
 	// GORM の First メソッド (主キー検索) を使う
 	result := r.db.First(&user, "user_id = ?", userID)

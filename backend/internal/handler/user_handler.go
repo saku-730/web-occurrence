@@ -73,3 +73,21 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, res)
 }
+
+func (h *UserHandler) GetMe(c *gin.Context) {
+	// AuthMiddlewareでセットされた user_id を取得
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	// userIDはTokenクレームから文字列として来ているはず
+	user, err := h.userService.GetUser(userID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "ユーザー情報の取得に失敗しました"})
+		return
+	}
+
+	c.JSON(http.StatusOK, user)
+}

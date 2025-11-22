@@ -19,6 +19,7 @@ var ErrCouchDBUserCreation = errors.New("CouchDBユーザーの作成に失敗�
 type UserService interface {
 	RegisterUser(req *model.UserRegisterRequest) (*entity.User, error)
 	LoginUser(req *model.UserLoginRequest) (string, error)
+	GetUser(userIDStr string) (*entity.User, error)
 }
 
 type userService struct {
@@ -99,4 +100,12 @@ func (s *userService) LoginUser(req *model.UserLoginRequest) (string, error) {
 	}
 
 	return token, nil
+}
+
+func (s *userService) GetUser(userIDStr string) (*entity.User, error) {
+	id, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return s.userRepo.FindUserByID(id)
 }
