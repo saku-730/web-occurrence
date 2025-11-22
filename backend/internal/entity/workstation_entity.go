@@ -5,4 +5,6 @@ type Workstation struct {
 	WorkstationName string `json:"workstation_name" gorm:"column:workstation_name"`
 }
 
-func (Workstation) TableName() string { return "workstation" }
+func (Workstation) TableName() string {
+	return "workstation"
+}
