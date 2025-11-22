@@ -15,32 +15,18 @@ export default function Home() {
   const [docs, setDocs] = useState<any[]>([]);
   const [PouchDBClass, setPouchDBClass] = useState<any>(null);
 
-  // ... (useEffect, handleLogin, startSync, fetchDocs, addTestData のロジックはそのまま維持！) ...
-  // ※ 長くなるので省略するけど、前のコードのロジック部分はそのままコピペして使ってね。
-  // ※ 以下にロジック部分の省略なし版が必要なら言ってほしいのだ。
-
-  // ↓ ここからロジックの再掲（念のため）
+  // --- 初期化 ---
   useEffect(() => {
     const loadPouchDB = async () => {
       try {
         const mod = await import('pouchdb-browser');
         setPouchDBClass(() => mod.default);
+        
         const savedToken = localStorage.getItem('auth_token');
         if (savedToken) {
           setToken(savedToken);
           setStatus('自動ログインしました！同期中なのだ');
-          // ※注意: ここで直接 startSync を呼ぶと PouchDBClass がまだ state に反映されてない可能性があるから
-          // 簡易的に mod.default を渡すのだ
-          const tempPouch = mod.default;
-          
-          // startSyncのロジックをここにも展開するか、関数を useEffect の外に出して依存配列を整理するのがベストだけど
-          // 今回は簡易実装として、下で定義する startSync を呼ぶために少し待つか、
-          // あるいは startSync 内で PouchDBClass を使わず引数で渡す形にするのだ。
-          // (前のコードの startSync は引数で PouchDB を受け取る形に直しておいたので、それでOKなのだ)
-          
-          // ※ startSync関数自体の定義はこのuseEffectより下にあるため、
-          // 本来は useCallback を使うか、関数定義を上に持ってくる必要があるのだ。
-          // エラーが出るようなら、関数定義を useEffect の前に移動してほしいのだ。
+          startSync(savedToken, mod.default);
         } else {
           setStatus('未ログイン');
         }
@@ -52,28 +38,38 @@ export default function Home() {
     loadPouchDB();
   }, []);
 
+  // --- ログイン処理 ---
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!PouchDBClass) return;
     setIsLoading(true);
     setStatus('通信中...');
+
     try {
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mailaddress: email, password: password }),
       });
+
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || '失敗');
+        throw new Error(err.error || 'ログイン失敗');
       }
+
       const data = await res.json();
-      localStorage.setItem('user_email', email);
+      
+      // ★ここが重要：情報を保存してイベントを発火
       localStorage.setItem('auth_token', data.token);
+      localStorage.setItem('user_email', email); // メールアドレスを保存
+      
+      // ヘッダーに変更を通知する
       window.dispatchEvent(new Event('auth-change'));
+
       setToken(data.token);
       setStatus('ログイン成功！');
       startSync(data.token, PouchDBClass);
+
     } catch (err: any) {
       setStatus(`エラー: ${err.message}`);
     } finally {
@@ -81,13 +77,7 @@ export default function Home() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token');
-    setToken(null);
-    setDocs([]);
-    setStatus('ログアウトしたのだ');
-  };
-
+  // --- PouchDB 同期処理 ---
   const startSync = (jwt: string, PouchDB: any) => {
     const localDB = new PouchDB(DB_NAME);
     const remoteDB = new PouchDB(`/api/couchdb/${DB_NAME}`, {
@@ -118,15 +108,12 @@ export default function Home() {
       created_by_user_id: '16'
     });
   };
-  // ↑ ここまでロジック
 
-  // --- 画面描画 (ここが変わったのだ！) ---
-  // 以前の min-h-screen などを削除して、layout.tsx の枠に収まるようにしたのだ
+  // --- 画面描画 ---
   return (
     <div className="w-full max-w-3xl mx-auto">
-      
       {!token ? (
-        /* === ログイン画面 === */
+        /* === ログインフォーム === */
         <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-md mx-auto mt-10">
           <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">ログイン</h2>
           <form onSubmit={handleLogin} className="space-y-5">
@@ -135,7 +122,7 @@ export default function Home() {
               <input
                 type="email"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-black transition"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black transition"
                 placeholder="user@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -146,7 +133,7 @@ export default function Home() {
               <input
                 type="password"
                 required
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none text-black transition"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none text-black transition"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -172,12 +159,6 @@ export default function Home() {
             <div>
               <p className="text-sm text-gray-500">Status</p>
               <p className="font-bold text-green-600">{status}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-400">{email}</p>
-              <button onClick={handleLogout} className="text-sm text-red-500 hover:text-red-700 font-medium">
-                ログアウト
-              </button>
             </div>
           </div>
 
