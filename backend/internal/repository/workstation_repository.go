@@ -9,8 +9,9 @@ type WorkstationRepository interface {
 	CreateWorkstation(ws *entity.Workstation) (*entity.Workstation, error)
 	AddUserToWorkstation(userID, workstationID int64, roleID int64) error
 	FindWorkstationByUserID(userID int64) (*entity.Workstation, error)
-	// ▼ 追加: ユーザーが所属するワークステーション一覧を取得
 	GetWorkstationsByUserID(userID int64) ([]entity.Workstation, error)
+	// ▼ 追加: 全ワークステーション取得（SyncServiceで使用）
+	GetAllWorkstations() ([]entity.Workstation, error)
 }
 
 type workstationRepository struct {
@@ -33,7 +34,7 @@ func (r *workstationRepository) AddUserToWorkstation(userID, workstationID int64
 	link := entity.WorkstationUser{
 		UserID:        userID,
 		WorkstationID: workstationID,
-		RoleID:        int(roleID), // ★ここで int64 -> int にキャストしたのだ
+		RoleID:        int(roleID),
 	}
 	return r.db.Create(&link).Error
 }
@@ -51,7 +52,6 @@ func (r *workstationRepository) FindWorkstationByUserID(userID int64) (*entity.W
 	return &ws, nil
 }
 
-// ▼ 追加: 一覧取得の実装
 func (r *workstationRepository) GetWorkstationsByUserID(userID int64) ([]entity.Workstation, error) {
 	var workstations []entity.Workstation
 	err := r.db.Table("workstation").
@@ -60,6 +60,15 @@ func (r *workstationRepository) GetWorkstationsByUserID(userID int64) ([]entity.
 		Find(&workstations).Error
 
 	if err != nil {
+		return nil, err
+	}
+	return workstations, nil
+}
+
+// ▼ 追加実装
+func (r *workstationRepository) GetAllWorkstations() ([]entity.Workstation, error) {
+	var workstations []entity.Workstation
+	if err := r.db.Find(&workstations).Error; err != nil {
 		return nil, err
 	}
 	return workstations, nil

@@ -2,12 +2,15 @@ package service
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
 	"time"
+	"os"
 
 	"github.com/saku-730/web-occurrence/backend/internal/entity"
 	"github.com/saku-730/web-occurrence/backend/internal/infrastructure"
+	"github.com/saku-730/web-occurrence/backend/internal/repository"
 	"gorm.io/gorm"
 )
 
@@ -19,18 +22,28 @@ type SyncService interface {
 type syncService struct {
 	db          *gorm.DB
 	couchClient infrastructure.CouchDBClient
+	wsRepo      repository.WorkstationRepository
+	dbPrefix    string
 }
 
-func NewSyncService(db *gorm.DB, couchClient infrastructure.CouchDBClient) SyncService {
+func NewSyncService(db *gorm.DB, couchClient infrastructure.CouchDBClient, wsRepo repository.WorkstationRepository) SyncService {
+	prefix := os.Getenv("COUCHDB_DB_PREFIX")
+	    if prefix == "" {
+		prefix = "json_db"
+	}
 	return &syncService{
 		db:          db,
 		couchClient: couchClient,
+		wsRepo:      wsRepo,
+		dbPrefix:    prefix,
 	}
 }
 
 func (s *syncService) StartPolling() {
 	go func() {
-		ticker := time.NewTicker(10 * time.Second)
+		log.Println("Starting Sync Polling (Interval: 60s)...")
+		// ▼ 変更: 60秒ごとにチェックするようになったのだ
+		ticker := time.NewTicker(60 * time.Second)
 		for range ticker.C {
 			s.syncAll()
 		}
@@ -38,7 +51,30 @@ func (s *syncService) StartPolling() {
 }
 
 func (s *syncService) syncAll() {
-	// 実装省略
+	// 1. 全ワークステーションを取得
+	workstations, err := s.wsRepo.GetAllWorkstations()
+	if err != nil {
+		log.Printf("Sync Error: Failed to fetch workstations: %v", err)
+		return
+	}
+
+	// 2. 各ワークステーションのCouchDBデータベースを確認
+	for _, ws := range workstations {
+		dbName := fmt.Sprintf("%s_ws_%d", s.dbPrefix, ws.WorkstationID)
+		
+		// 3. 全ドキュメント取得
+		docs, err := s.couchClient.FetchAllDocs(dbName) 
+		if err != nil {
+			// DBが存在しない場合などはスキップ（ログがうるさくなるのでエラーログは出さないか、デバッグ時のみにする）
+			continue
+		}
+
+		for _, doc := range docs {
+			if err := s.ProcessDocument(doc); err != nil {
+				log.Printf("Failed to process doc %v in %s: %v", doc["_id"], dbName, err)
+			}
+		}
+	}
 }
 
 func (s *syncService) ProcessDocument(doc map[string]interface{}) error {
@@ -57,7 +93,6 @@ func (s *syncService) ProcessDocument(doc map[string]interface{}) error {
 	return s.db.Transaction(func(tx *gorm.DB) error {
 		// 1. Classification
 		if data.ClassificationData.ClassificationID != "" {
-			// Map -> JSON String 変換
 			classJSON, _ := json.Marshal(data.ClassificationData.ClassClassification)
 			cls := entity.ClassificationJSON{
 				ClassificationID:    data.ClassificationData.ClassificationID,
@@ -68,10 +103,7 @@ func (s *syncService) ProcessDocument(doc map[string]interface{}) error {
 
 		// 2. Place
 		if data.PlaceData.PlaceID != "" {
-			// Map -> JSON String 変換
 			coordJSON, _ := json.Marshal(data.PlaceData.Coordinates)
-			
-			// Pointer -> Value 変換
 			accuracy := 0.0
 			if data.PlaceData.Accuracy != nil {
 				accuracy = *data.PlaceData.Accuracy
@@ -79,7 +111,7 @@ func (s *syncService) ProcessDocument(doc map[string]interface{}) error {
 
 			pl := entity.Place{
 				PlaceID:     data.PlaceData.PlaceID,
-				PlaceNameID: "", // nilではなく空文字
+				PlaceNameID: "",
 				Coordinates: string(coordJSON),
 				Accuracy:    accuracy,
 			}
@@ -88,26 +120,17 @@ func (s *syncService) ProcessDocument(doc map[string]interface{}) error {
 
 		// 3. Occurrence
 		createdAt, _ := time.Parse(time.RFC3339, data.CreatedAt)
-
-		// String -> Int64 変換
 		wsID, _ := strconv.ParseInt(data.WorkstationID, 10, 64)
 		userID, _ := strconv.ParseInt(data.CreatedByUserID, 10, 64)
 
-		// Pointer -> Value 変換
 		projectID := ""
-		if data.ProjectID != nil {
-			projectID = *data.ProjectID
-		}
+		if data.ProjectID != nil { projectID = *data.ProjectID }
 		
 		bodyLength := 0.0
-		if data.OccurrenceData.BodyLength != nil {
-			bodyLength = *data.OccurrenceData.BodyLength
-		}
+		if data.OccurrenceData.BodyLength != nil { bodyLength = *data.OccurrenceData.BodyLength }
 
 		langID := ""
-		if data.LanguageID != nil {
-			langID = *data.LanguageID
-		}
+		if data.LanguageID != nil { langID = *data.LanguageID }
 
 		occ := entity.Occurrence{
 			OccurrenceID:     data.ID,

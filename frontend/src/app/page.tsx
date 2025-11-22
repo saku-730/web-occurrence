@@ -1,162 +1,114 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-// 作成した同期関数をインポート
-import { fetchAndSaveMasterData } from '@/utils/syncMasterData';
+import { usePouchDBSync } from '@/hooks/usePouchDBSync'; // 作成したフックをインポート
 
-// ★ DB名を動的に変えるため定数ではなく関数や変数で扱う必要があるけど、
-// 今回は単一DB構成で進めているので、DB名は固定で、フィルタリングやバリデーションで制御する想定にするのだ。
 const DB_NAME = process.env.NEXT_PUBLIC_DB_NAME || 'test_db';
 
 export default function Home() {
   const router = useRouter();
   const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [workstations, setWorkstations] = useState<any[]>([]);
   const [currentWS, setCurrentWS] = useState<any>(null);
-  const [status, setStatus] = useState<string>('初期化中...');
-  const [docs, setDocs] = useState<any[]>([]);
-  const [PouchDBClass, setPouchDBClass] = useState<any>(null);
+
+  // ★ 同期フックを使用
+  const syncState = usePouchDBSync(currentWS?.workstation_id || null);
 
   useEffect(() => {
-    const loadPouchDB = async () => {
-      try {
-        // PouchDBを動的インポート
-        const mod = await import('pouchdb-browser');
-        // ★修正: mod.default が関数ならそれを、そうでなければ mod を使う
-        const PouchDB = (mod.default && typeof mod.default === 'function') ? mod.default : mod;
-        
-        setPouchDBClass(() => PouchDB);
-        
-        const savedToken = localStorage.getItem('auth_token');
-        const savedWS = localStorage.getItem('current_workstation');
+    const t = localStorage.getItem('auth_token');
+    if (!t) {
+      router.push('/login');
+      return;
+    }
+    setToken(t);
 
-        if (!savedToken) {
-          router.push('/login');
-          return;
+    // ユーザー情報のデコード (簡易実装: 本来はjwt-decode等を使う)
+    // ログイン時にlocalStorageにuser_idなどを保存しておくのがベスト
+    // ここではAPIから取得する流れを想定
+    fetch('/api/users/me', { headers: { Authorization: `Bearer ${t}` } })
+      .then(res => res.json())
+      .then(data => setUser(data))
+      .catch(() => router.push('/login'));
+
+    // ワークステーション一覧取得
+    fetch('/api/my-workstations', { headers: { Authorization: `Bearer ${t}` } })
+      .then(res => res.json())
+      .then(data => {
+        setWorkstations(data || []);
+        // 簡易的に最初のWSを選択状態にする
+        if (data && data.length > 0) {
+          const savedWS = localStorage.getItem('current_workstation');
+          if (savedWS) {
+            setCurrentWS(JSON.parse(savedWS));
+          } else {
+            setCurrentWS(data[0]);
+            localStorage.setItem('current_workstation', JSON.stringify(data[0]));
+          }
         }
-
-        // ★ ワークステーションが選択されていなければ選択画面へ
-        if (!savedWS) {
-          router.push('/workstation');
-          return;
-        }
-
-        setToken(savedToken);
-        setCurrentWS(JSON.parse(savedWS));
-        
-        // ▼ 追加: マスターデータを取得・保存するのだ！
-        setStatus('マスターデータ同期中...');
-        // ここでAPIを叩いてIndexedDBに保存する処理を実行
-        // 第2引数に動的インポートした PouchDB クラスを渡すのだ！
-        await fetchAndSaveMasterData(savedToken, PouchDB);
-        
-        setStatus('同期準備完了');
-        
-        // メインデータの同期開始
-        startSync(savedToken, PouchDB);
-
-      } catch (e) {
-        console.error(e);
-        setStatus('PouchDBの読み込み失敗');
-      }
-    };
-    loadPouchDB();
+      });
   }, [router]);
 
-  // --- PouchDB 同期処理 ---
-  const startSync = (jwt: string, PouchDB: any) => {
-    // ★ 安全策: PouchDBがクラスか確認
-    const DBClass = (typeof PouchDB === 'function') ? PouchDB : (PouchDB.default || PouchDB);
-
-    // ★ ここで DB名を変えることで「ダウンロードしてそのDBをいじる」を実現できる。
-    // ローカルDB名を `test_db_ws_{id}` のように分けるのが一番安全なのだ。
-    const ws = JSON.parse(localStorage.getItem('current_workstation') || '{}');
-    if (!ws.workstation_id) {
-        console.error("Workstation IDが見つかりません");
-        return;
-    }
-
-    const localDBName = `${DB_NAME}_ws_${ws.workstation_id}`; // ワークステーションごとにローカルDBを分ける
-    const localDB = new DBClass(localDBName);
-    
-    // リモートは1つの巨大なDB (occurrence) なのでそのまま
-    // (※ 本来はフィルタリングが必要)
-    const remoteDB = new DBClass(`/api/couchdb/${DB_NAME}`, {
-      fetch: (url: string, opts: any) => {
-        opts.headers.set('Authorization', `Bearer ${jwt}`);
-        return DBClass.fetch(url, opts);
-      },
-    });
-
-    // ★ 本来はここで filter オプションを使って、サーバーから
-    // 「このワークステーションのデータだけ」をプルするように設定するのだ。
-    // 今回はフィルタ実装までは含まれていないので、全データ同期になる点に注意なのだ。
-    localDB.sync(remoteDB, { 
-      live: true, 
-      retry: true 
-    })
-      .on('change', () => fetchDocs(localDB))
-      .on('error', (err: any) => console.error(err));
-      
-    fetchDocs(localDB);
+  const handleWorkstationChange = (ws: any) => {
+    setCurrentWS(ws);
+    localStorage.setItem('current_workstation', JSON.stringify(ws));
+    // ページリロードしてDB再接続等を確実にしても良い
+    window.location.reload();
   };
 
-  const fetchDocs = async (db: any) => {
-    const res = await db.allDocs({ include_docs: true, descending: true });
-    setDocs(res.rows.map((row: any) => row.doc));
-  };
-
-  if (!token || !currentWS) {
-    return <div className="min-h-screen flex items-center justify-center text-gray-500">読み込み中...</div>;
-  }
+  if (!token) return null;
 
   return (
-    <div className="w-full max-w-3xl mx-auto">
-      <div className="space-y-6">
-        {/* ヘッダー：現在のワークステーション表示 */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-800">
-            {currentWS.workstation_name} <span className="text-sm font-normal text-gray-500">(ID: {currentWS.workstation_id})</span>
-          </h2>
-          <button 
-            onClick={() => {
-              localStorage.removeItem('current_workstation');
-              router.push('/workstation');
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white shadow p-4 flex justify-between items-center">
+        <h1 className="text-xl font-bold">Web Occurrence</h1>
+        <div className="flex items-center gap-4">
+          {/* 同期状態の表示 */}
+          <span className={`text-xs font-mono px-2 py-1 rounded ${
+            syncState === 'active' ? 'bg-green-100 text-green-800' : 
+            syncState === 'error' ? 'bg-red-100 text-red-800' : 'bg-gray-100'
+          }`}>
+            Sync: {syncState.toUpperCase()}
+          </span>
+
+          <select 
+            className="border rounded p-1"
+            value={currentWS?.workstation_id || ''}
+            onChange={(e) => {
+              const ws = workstations.find(w => String(w.workstation_id) === e.target.value);
+              if (ws) handleWorkstationChange(ws);
             }}
-            className="text-sm text-blue-600 hover:underline"
           >
-            切替
-          </button>
+            {workstations.map(ws => (
+              <option key={ws.workstation_id} value={ws.workstation_id}>
+                {ws.workstation_name}
+              </option>
+            ))}
+          </select>
+          <div>{user?.user_name}</div>
         </div>
+      </header>
 
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100 flex justify-between items-center">
-          <div>
-            <p className="text-sm text-gray-500">Status</p>
-            <p className="font-bold text-green-600">{status}</p>
+      <main className="p-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* 新規作成カード */}
+          <Link href="/create" className="block group">
+            <div className="bg-white p-6 rounded-xl shadow-sm border-2 border-dashed border-gray-300 hover:border-green-500 transition-colors h-full flex flex-col items-center justify-center min-h-[200px]">
+              <span className="text-4xl text-gray-400 group-hover:text-green-500 mb-2">+</span>
+              <span className="font-bold text-gray-500 group-hover:text-green-600">新規データ登録</span>
+            </div>
+          </Link>
+
+          {/* データ一覧表示エリア (PouchDBから取得して表示する実装が必要) */}
+          {/* 今回は省略するが、usePouchDBSyncと同じ要領で allDocs を取得して表示する */}
+          <div className="bg-white p-6 rounded-xl shadow-sm">
+            <h2 className="font-bold mb-2">最近のデータ</h2>
+            <p className="text-sm text-gray-500">ここに登録済みデータが表示されます。</p>
           </div>
         </div>
-
-        {/* データ追加ボタンエリアを削除したのだ */}
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-            <h3 className="font-bold text-gray-700">データ一覧 ({docs.length})</h3>
-          </div>
-          <ul className="divide-y divide-gray-100 max-h-[500px] overflow-y-auto">
-            {docs.length === 0 ? (
-              <li className="p-8 text-center text-gray-400">データがありません</li>
-            ) : (
-              docs.map((doc: any) => (
-                <li key={doc._id} className="p-4 hover:bg-gray-50 transition">
-                  <pre className="text-xs text-gray-600 whitespace-pre-wrap break-all font-mono">
-                    {JSON.stringify(doc, null, 2)}
-                  </pre>
-                </li>
-              ))
-            )}
-          </ul>
-        </div>
-      </div>
+      </main>
     </div>
   );
 }
