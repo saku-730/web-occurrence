@@ -106,26 +106,6 @@ export default function Home() {
     setDocs(res.rows.map((row: any) => row.doc));
   };
 
-  const addTestData = async () => {
-    if (!PouchDBClass || !currentWS) return;
-    // 保存先もワークステーションごとのDBにする
-    const localDBName = `${DB_NAME}_ws_${currentWS.workstation_id}`;
-    
-    // Stateに入っている PouchDBClass を使う（ここも安全策で関数チェックしておく）
-    const DBClass = (typeof PouchDBClass === 'function') ? PouchDBClass : (PouchDBClass.default || PouchDBClass);
-    const db = new DBClass(localDBName);
-    
-    await db.post({
-      type: 'occurrence',
-      title: 'New Data',
-      created_at: new Date().toISOString(),
-      workstation_id: String(currentWS.workstation_id), // IDを付与
-      created_by_user_id: '16' // TODO: ユーザーIDも動的にとるべき
-    });
-    // データ追加後にリストを更新
-    fetchDocs(db);
-  };
-
   if (!token || !currentWS) {
     return <div className="min-h-screen flex items-center justify-center text-gray-500">読み込み中...</div>;
   }
@@ -156,14 +136,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="flex justify-end">
-          <button
-            onClick={addTestData}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition shadow-sm font-medium"
-          >
-            + データを追加
-          </button>
-        </div>
+        {/* データ追加ボタンエリアを削除したのだ */}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
