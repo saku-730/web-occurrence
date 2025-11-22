@@ -7,14 +7,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter(
+// SetupRoutes は main.go で作成された gin.Engine にルートを登録するのだ
+func SetupRoutes(
+	r *gin.Engine,
 	userHandler *handler.UserHandler,
-	couchDBHandler *handler.CouchDBHandler,
-	masterHandler *handler.MasterHandler,
 	workstationHandler *handler.WorkstationHandler,
-) *gin.Engine {
-	r := gin.Default()
-
+	masterHandler *handler.MasterHandler,
+	couchDBHandler *handler.CouchDBHandler,
+) {
 	// --- Public API グループ (認証不要) ---
 	apiPublic := r.Group("/api")
 	{
@@ -30,9 +30,9 @@ func SetupRouter(
 		apiProtected.GET("/master-data", masterHandler.GetMasterData)
 		
 		apiProtected.POST("/workstation/create", workstationHandler.Create)
-		// ▼ 追加: ワークステーション一覧
-		apiProtected.GET("/workstations", workstationHandler.List)
+		apiProtected.GET("/workstations", workstationHandler.List) // /api/my-workstations と合わせるか検討が必要だが、一旦Handler定義に従う
+		
+		// フロントエンドからのリクエストに合わせてエンドポイントを追加・調整する場合はここで行うのだ
+		// 例: apiProtected.GET("/my-workstations", workstationHandler.List) 
 	}
-
-	return r
 }

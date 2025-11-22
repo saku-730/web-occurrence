@@ -7,9 +7,9 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/saku-730/web-occurrence/backend/internal/handler"
 	"github.com/saku-730/web-occurrence/backend/internal/infrastructure"
-	"github.com/saku-730/web-occurrence/backend/internal/middleware"
 	"github.com/saku-730/web-occurrence/backend/internal/model"
 	"github.com/saku-730/web-occurrence/backend/internal/repository"
 	"github.com/saku-730/web-occurrence/backend/internal/router"
@@ -17,6 +17,12 @@ import (
 )
 
 func main() {
+	// ★追加: .envファイルを読み込むのだ
+	// これがないと、ローカル開発環境では環境変数が空っぽのままになっちゃうのだ
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found (using system environment variables)")
+	}
+
 	// 1. Initialize Database
 	db, err := infrastructure.NewPostgresDB()
 	if err != nil {
@@ -41,12 +47,10 @@ func main() {
 	masterRepo := repository.NewMasterRepository(db)
 
 	// 4. Initialize Services
-	authService := service.NewUserService(userRepo, wsRepo)
+	authService := service.NewUserService(userRepo, couchClient)
 	wsService := service.NewWorkstationService(wsRepo, masterRepo, couchClient)
-	masterService := service.NewMasterService(masterRepo)
-	couchService := service.NewCouchDBService(couchClient)
-
-	// ★ 修正: SyncServiceにwsRepoを渡す
+	masterService := service.NewMasterService(masterRepo, wsRepo)
+	couchService := service.NewCouchDBService(userRepo, couchClient, couchConfig.Secret, couchConfig.URL)
 	syncService := service.NewSyncService(db, couchClient, wsRepo)
 
 	// 5. Start Sync Polling (Background)
@@ -61,7 +65,6 @@ func main() {
 	// 7. Setup Router
 	r := gin.Default()
 
-	// CORS Setup
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
@@ -71,8 +74,7 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	// Define Routes
-	router.SetupRoutes(r, userHandler, wsHandler, masterHandler, couchHandler, middleware.AuthMiddleware)
+	router.SetupRoutes(r, userHandler, wsHandler, masterHandler, couchHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
