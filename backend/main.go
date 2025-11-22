@@ -31,19 +31,22 @@ func main() {
 	couchClient := infrastructure.NewCouchDBClient()
 	userRepo := repository.NewUserRepository(db)
 	masterRepo := repository.NewMasterRepository(db)
+	wsRepo := repository.NewWorkstationRepository(db) // ★追加
 	
 	// Service
 	couchDBService := service.NewCouchDBService(userRepo, couchClient, couchSecret, couchURL)
 	userService := service.NewUserService(userRepo, couchClient)
 	masterService := service.NewMasterService(masterRepo)
+	wsService := service.NewWorkstationService(wsRepo, masterRepo, couchClient) // ★追加
 
 	// Handlers
 	userHandler := handler.NewUserHandler(userService)
 	couchDBHandler := handler.NewCouchDBHandler(couchDBService)
 	masterHandler := handler.NewMasterHandler(masterService)
+	wsHandler := handler.NewWorkstationHandler(wsService) // ★追加
 
 	// Router
-	r := router.SetupRouter(userHandler, couchDBHandler, masterHandler)
+	r := router.SetupRouter(userHandler, couchDBHandler, masterHandler, wsHandler) // ★引数追加
 
 	// サーバー起動
 	port := os.Getenv("PORT")

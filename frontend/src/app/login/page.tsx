@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+// マスターデータ同期はトップページで行うので、ここではimport削除またはコメントアウト
+// import { fetchAndSaveMasterData } from '@/utils/syncMasterData';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,21 +32,15 @@ export default function LoginPage() {
 
       const data = await res.json();
 
-      // --- 保存処理 ---
-      // 1. LocalStorage (PouchDB用/クライアント用)
       localStorage.setItem('auth_token', data.token);
       localStorage.setItem('user_email', email);
-
-      // 2. Cookie (Middleware用) ★これが重要！
-      // 有効期限を1日(86400秒)に設定しているのだ
       document.cookie = `auth_token=${data.token}; path=/; max-age=86400; SameSite=Lax`;
 
-      // 3. イベント通知 & 遷移
       window.dispatchEvent(new Event('auth-change'));
       setStatus('ログイン成功！');
       
-      // ダッシュボードへ移動
-      router.push('/');
+      // ★修正: ワークステーション選択画面へ移動するのだ
+      router.push('/workstation/new');
 
     } catch (err: any) {
       setStatus(`エラー: ${err.message}`);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import PouchDB from 'pouchdb-browser';
+// import PouchDB from 'pouchdb-browser'; // ← これを削除して動的インポートにするのだ
 
 const DB_NAME = process.env.NEXT_PUBLIC_DB_NAME || 'test_db';
 const MASTER_DOC_ID = '_local/master_data';
@@ -14,6 +14,10 @@ export default function MasterDataPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // ★修正ポイント: ここで動的にインポートするのだ
+        const pouchModule = await import('pouchdb-browser');
+        const PouchDB = pouchModule.default || pouchModule;
+        
         const db = new PouchDB(DB_NAME);
         // _local/master_data ドキュメントを取得
         const doc: any = await db.get(MASTER_DOC_ID);

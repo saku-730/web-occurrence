@@ -12,6 +12,7 @@ func SetupRouter(
 	userHandler *handler.UserHandler,
 	couchDBHandler *handler.CouchDBHandler,
 	masterHandler *handler.MasterHandler,
+	wsHandler *handler.WorkstationHandler,
 ) *gin.Engine {
 	r := gin.Default()
 
@@ -35,6 +36,7 @@ func SetupRouter(
 		apiProtected.Any("/couchdb/*path", couchDBHandler.ProxyRequest)
 
 		apiProtected.GET("/master-data", masterHandler.GetMasterData)
+		apiProtected.POST("/workstation/create", wsHandler.Create)
 	}
 
 	return r
