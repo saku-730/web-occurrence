@@ -33,8 +33,8 @@ func main() {
 	couchConfig := &model.CouchDBConfig{
 		URL:       os.Getenv("COUCHDB_URL"),
 		Secret:    os.Getenv("COUCHDB_SECRET"),
-		AdminUser: os.Getenv("COUCHDB_USER"),
-		AdminPass: os.Getenv("COUCHDB_PASSWORD"),
+		AdminUser: os.Getenv("COUCHDB_ADMIN_USER"),
+		AdminPass: os.Getenv("COUCHDB_ADMIN_PASS"),
 	}
 	if couchConfig.URL == "" {
 		couchConfig.URL = "http://localhost:5984" // Default
