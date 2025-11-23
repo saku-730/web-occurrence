@@ -29,7 +29,7 @@ type syncService struct {
 func NewSyncService(db *gorm.DB, couchClient infrastructure.CouchDBClient, wsRepo repository.WorkstationRepository) SyncService {
 	prefix := os.Getenv("COUCHDB_DB_PREFIX")
 	    if prefix == "" {
-		prefix = "json_db"
+		prefix = "db"
 	}
 	return &syncService{
 		db:          db,
@@ -111,7 +111,7 @@ func (s *syncService) ProcessDocument(doc map[string]interface{}) error {
 
 			pl := entity.Place{
 				PlaceID:     data.PlaceData.PlaceID,
-				PlaceNameID: "",
+				PlaceNameID: data.PlaceData.PlaceNameID,
 				Coordinates: string(coordJSON),
 				Accuracy:    accuracy,
 			}
@@ -179,6 +179,7 @@ type IncomingOccurrenceData struct {
 
 	PlaceData struct {
 		PlaceID     string                 `json:"place_id"`
+		PlaceNameID *string                `json:"place_name_id"`
 		Coordinates map[string]interface{} `json:"coordinates"`
 		Accuracy    *float64               `json:"accuracy"`
 	} `json:"place_data"`
