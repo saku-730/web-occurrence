@@ -1,3 +1,4 @@
+
 package infrastructure
 
 import (
@@ -36,8 +37,8 @@ func NewCouchDBClient(config *model.CouchDBConfig) CouchDBClient {
 		config.URL = "http://localhost:5984"
 	}
 	
-	// 環境変数からプレフィックスを取得、なければデフォルトの "test_db" を使うのだ
-	dbPrefix := "test_db" // 環境変数からの取得が未実装のため一旦固定
+	// ★修正: DBプレフィックスを "db" に修正するのだ
+	dbPrefix := "db" // 環境変数からの取得が未実装のため一旦固定
 
 	return &couchDBClient{
 		client:    &http.Client{Timeout: 10 * time.Second},
@@ -50,6 +51,7 @@ func NewCouchDBClient(config *model.CouchDBConfig) CouchDBClient {
 
 // ▼ 追加実装: ワークステーションIDからDB名を生成するのだ
 func (c *couchDBClient) CreateWorkstationDBName(workstationID int64) string {
+	// 修正後の命名規則: db_ws_[ID] になるのだ
 	return fmt.Sprintf("%s_ws_%d", c.dbPrefix, workstationID)
 }
 
@@ -160,6 +162,7 @@ func (c *couchDBClient) CreateDatabase(dbName string) error {
 // ▼ 追加実装: SetDatabaseUserAccess は指定したユーザーにDBの読み書き権限を与えるのだ
 func (c *couchDBClient) SetDatabaseUserAccess(dbName string, userID string) error {
 	securityDoc := map[string]interface{}{
+		// ★ここが重要: ユーザーIDをDBのメンバーに追加することで403を解消するのだ
 		"members": map[string]interface{}{
 			"names": []string{userID}, // ユーザーIDをメンバーに追加するのだ
 			"roles": []string{},
@@ -219,13 +222,6 @@ func (c *couchDBClient) UpsertDocument(docID string, data map[string]interface{}
 	if err := c.CreateDatabase(dbName); err != nil {
 		return fmt.Errorf("DBの確保に失敗 (%s): %w", dbName, err)
 	}
-
-	// 注: UpsertDocumentでは、ワークステーション作成時とは異なり、
-    // ここでユーザーのアクセス権を設定する必要はないのだ。
-    // ユーザーは同期リクエストで来るため、この関数を呼び出す際にはすでにDB作成と権限付与が完了しているはずなのだ。
-    // もしここで UpsertDocument が動作しているなら、それは管理者権限が使われている場合か、
-    // またはフロントエンドがユーザーDBに直接アクセスしていないケースなのだ。
-    // 今回のエラーはユーザー同期エラーなので、このままにするのだ。
 
 	url := fmt.Sprintf("%s/%s/%s", c.baseURL, dbName, docID)
 

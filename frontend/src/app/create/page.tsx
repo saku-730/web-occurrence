@@ -119,7 +119,9 @@ export default function CreateOccurrencePage() {
       const mod = await import('pouchdb-browser');
       const PouchDB = ((mod.default && typeof mod.default === 'function') ? mod.default : mod) as unknown as any;
       
-      const localDBName = `${userId}_db_ws_${currentWS.workstation_id}`; // userIdは文字列で取得済み
+      // ★修正: ここで DB 名を同期フック (usePouchDBSync) の命名規則に合わせるのだ
+      // const localDBName = `${userId}_db_ws_${currentWS.workstation_id}`; // 古い命名規則
+      const localDBName = `db_ws_${currentWS.workstation_id}`; // ★修正: ユーザーIDを削除したのだ
       const db = new PouchDB(localDBName);
       
       console.log('--- [FRONTEND DEBUG] Attempting local save via POST');

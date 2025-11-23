@@ -68,13 +68,13 @@ export default function Home() {
           {/* 同期状態の表示 */}
           <span className={`text-xs font-mono px-2 py-1 rounded ${
             syncState === 'active' ? 'bg-green-100 text-green-800' : 
-            syncState === 'error' ? 'bg-red-100 text-red-800' : 'bg-gray-100'
+            syncState === 'error' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-black'
           }`}>
             Sync: {syncState.toUpperCase()}
           </span>
 
           <select 
-            className="border rounded p-1"
+            className="border rounded p-1 text-black"
             value={currentWS?.workstation_id || ''}
             onChange={(e) => {
               const ws = workstations.find(w => String(w.workstation_id) === e.target.value);
@@ -87,7 +87,7 @@ export default function Home() {
               </option>
             ))}
           </select>
-          <div>{user?.user_name}</div>
+          <div className="text-black">{user?.user_name}</div>
         </div>
       </header>
 

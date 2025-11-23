@@ -37,8 +37,9 @@ export function usePouchDBSync(
        try {
          const PouchDB = await getPouchDB(); // これで参照エラーがなくなるのだ！
          
-         // ★修正点4: 新しい命名規則を適用するのだ
-         const dbName = `db_ws_${workstationId}`; // ユーザーIDを使うのだ
+         // ★修正点4: DB命名規則をバックエンドの [prefix]_ws_[id] に合わせるのだ
+         // const dbName = `${userId}_db_ws_${workstationId}`; // ユーザーIDを使うのだ (削除)
+           const dbName = `db_ws_${workstationId}`; // ★修正: バックエンドの命名規則に合わせるのだ
          
          // 1. ローカルDB
          localDB = new PouchDB(dbName);

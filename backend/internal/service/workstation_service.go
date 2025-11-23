@@ -1,3 +1,4 @@
+
 package service
 
 import (
@@ -61,7 +62,7 @@ func (s *workstationService) CreateWorkstation(userIDStr string, req *model.Crea
         fmt.Printf("Warning: Failed to instantly create CouchDB for new WS (%s). Replication will fail until fixed: %v\n", dbName, err)
     }
 
-    // ★追加: DB作成後、即座にユーザーにアクセス権を付与するのだ！
+    // ★追加: DB作成後、即座にユーザーにアクセス権を付与するのだ！ (403対策)
     if err := s.couchClient.SetDatabaseUserAccess(dbName, userIDStr); err != nil {
         // アクセス権限設定に失敗したら、同期ができなくなるのでエラーを返すのだ
         return nil, fmt.Errorf("ワークステーションは作成されましたが、CouchDBのアクセス権設定に失敗しました: %w", err)

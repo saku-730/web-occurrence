@@ -1,7 +1,15 @@
+// frontend/src/app/workstation/create/page.tsx (修正後の全体)
+
 'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+
+// ★ Workstationの型定義
+interface Workstation {
+  workstation_id: number;
+  workstation_name: string;
+}
 
 export default function CreateWorkstationPage() {
   const router = useRouter();
@@ -32,6 +40,13 @@ export default function CreateWorkstationPage() {
         throw new Error(errData.error || '作成に失敗しました');
       }
 
+      // ★修正: 応答から新しいワークステーション情報を取得するのだ
+      const newWS: Workstation = await res.json();
+      
+      // ★修正: 新しいワークステーションをローカルストレージに設定するのだ！
+      // これにより、メイン画面 (page.tsx) に戻ったときに新しいWSが選択される
+      localStorage.setItem('current_workstation', JSON.stringify(newWS));
+      
       // 作成成功！トップページへ戻って同期を開始するのだ
       router.push('/');
 
