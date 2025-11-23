@@ -13,6 +13,7 @@ import (
 type WorkstationService interface {
 	CreateWorkstation(userID string, req *model.CreateWorkstationRequest) (*entity.Workstation, error)
 	GetMyWorkstations(userID string) ([]entity.Workstation, error)
+	EnsureAllDatabases() error
 }
 
 type workstationService struct {
@@ -33,6 +34,7 @@ func NewWorkstationService(
 	}
 }
 
+// CreateWorkstation はワークステーションを作成し、CouchDBのDBを即時作成するのだ
 func (s *workstationService) CreateWorkstation(userIDStr string, req *model.CreateWorkstationRequest) (*entity.Workstation, error) {
 	userID, _ := strconv.ParseInt(userIDStr, 10, 64)
 
@@ -48,39 +50,20 @@ func (s *workstationService) CreateWorkstation(userIDStr string, req *model.Crea
 		return nil, err
 	}
 
-	languages, _ := s.masterRepo.GetAllLanguages()
-	fileTypes, _ := s.masterRepo.GetAllFileTypes()
-	fileExts, _ := s.masterRepo.GetAllFileExtensions()
-	roles, _ := s.masterRepo.GetAllUserRoles()
-	
-	// 修正: entity.WorkstationUser型を使わず、CouchDB保存用のMapスライスにする
-	users := []map[string]interface{}{
-		{
-			"user_id":      userID,
-			"display_name": "Current User", // ※本来はDBからユーザー名を取得すべきだけど、今は固定値で回避
-		},
-	}
-
-	docID := "_local/master_data" 
-	docData := map[string]interface{}{
-		"_id":                docID,
-		"type":               "master_data",
-		"workstation_id":     fmt.Sprintf("%d", createdWS.WorkstationID), 
-		"data": map[string]interface{}{
-			"languages":         languages,
-			"file_types":        fileTypes,
-			"file_extensions":   fileExts,
-			"user_roles":        roles,
-			"workstation_users": users,
-		},
-	}
-
-	if err := s.couchClient.UpsertDocument(docID, docData); err != nil {
-		fmt.Printf("Failed to init CouchDB master data: %v\n", err)
-	}
+	// ★修正: initMasterData の呼び出しを完全に削除したのだ！
+	// DB作成と初期データ投入が不要になったので、この処理は不要なのだ。
+    
+    // 代わりに、ワークステーション作成時に即座にCouchDBのDB（箱）だけを作成する
+    dbName := s.couchClient.CreateWorkstationDBName(createdWS.WorkstationID)
+    if err := s.couchClient.CreateDatabase(dbName); err != nil {
+        // DB作成自体が管理者権限のエラーで失敗した場合は、警告ログを出す
+        // データ損失を防ぐため、Postgres登録自体は失敗としない
+        fmt.Printf("Warning: Failed to instantly create CouchDB for new WS (%s). Replication will fail until fixed: %v\n", dbName, err)
+    }
 
 	return createdWS, nil
 }
+
 
 func (s *workstationService) GetMyWorkstations(userIDStr string) ([]entity.Workstation, error) {
 	userID, err := strconv.ParseInt(userIDStr, 10, 64)
@@ -88,4 +71,25 @@ func (s *workstationService) GetMyWorkstations(userIDStr string) ([]entity.Works
 		return nil, err
 	}
 	return s.wsRepo.GetWorkstationsByUserID(userID)
+}
+
+// EnsureAllDatabases はすべてのワークステーションのDBを確保するのだ
+func (s *workstationService) EnsureAllDatabases() error {
+	workstations, err := s.wsRepo.GetAllWorkstations()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("--- Checking CouchDB Databases for Workstations ---")
+	for _, ws := range workstations {
+		dbName := s.couchClient.CreateWorkstationDBName(ws.WorkstationID)
+		if err := s.couchClient.CreateDatabase(dbName); err != nil {
+			// DB作成エラーは致命的なのでログに残す
+			fmt.Printf("Error creating DB %s: %v\n", dbName, err)
+		} else {
+			fmt.Printf("Database ensured: %s\n", dbName)
+		}
+	}
+	fmt.Println("-------------------------------------------------")
+	return nil
 }
