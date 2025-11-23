@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-// import PouchDB from 'pouchdb-browser'; // ← これを削除して動的インポートにするのだ
+// PouchDBは動的インポートで使用するため、ここではimportしない
 
-const DB_NAME = process.env.NEXT_PUBLIC_DB_NAME || 'test_db';
 const MASTER_DOC_ID = '_local/master_data';
 
 export default function MasterDataPage() {
@@ -14,20 +13,53 @@ export default function MasterDataPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // ★修正ポイント: ここで動的にインポートするのだ
+        // 1. ローカルストレージから現在選択中のワークステーション情報を取得
+        // Next.jsなどのSSR環境を考慮し、windowオブジェクトの存在確認を行うのが安全だが
+        // useEffect内であればクライアントサイドでの実行が保証されるのでそのままアクセス可能
+        const wsJson = localStorage.getItem('current_workstation');
+        
+        if (!wsJson) {
+          setError('ワークステーションが選択されていません。トップページまたはワークステーション選択画面に戻ってください。');
+          setLoading(false);
+          return;
+        }
+
+        const currentWorkstation = JSON.parse(wsJson);
+        const wsId = currentWorkstation.workstation_id;
+
+        if (!wsId) {
+          setError('ワークステーションIDが無効です。再度ワークステーションを選択し直してください。');
+          setLoading(false);
+          return;
+        }
+
+        // 2. データベース名を動的に構築 (例: db_ws_1)
+        // バックエンドや同期フックの命名規則と一致させる必要がある
+        const dbName = `db_ws_${wsId}`;
+        console.log(`[MasterPage] Loading from DB: ${dbName}`);
+
+        // 3. PouchDBを動的にインポート
         const pouchModule = await import('pouchdb-browser');
         const PouchDB = pouchModule.default || pouchModule;
         
-        const db = new PouchDB(DB_NAME);
-        // _local/master_data ドキュメントを取得
+        // 4. 正しいDB名でインスタンス化
+        const db = new PouchDB(dbName);
+
+        // 5. _local/master_data ドキュメントを取得
         const doc: any = await db.get(MASTER_DOC_ID);
+        
+        if (!doc.data) {
+          throw new Error('マスターデータの形式が不正です (dataプロパティがありません)');
+        }
+
         setMasterData(doc.data);
+
       } catch (err: any) {
-        console.error(err);
+        console.error('[MasterPage] Error:', err);
         if (err.status === 404) {
-          setError('マスターデータが見つかりません。一度トップページに戻って同期を待ってください。');
+          setError(`マスターデータが見つかりません。同期がまだ完了していない可能性があります。(DB: db_ws_${JSON.parse(localStorage.getItem('current_workstation') || '{}').workstation_id})`);
         } else {
-          setError('データの読み込みに失敗しました。');
+          setError(`データの読み込みに失敗しました: ${err.message || err}`);
         }
       } finally {
         setLoading(false);
@@ -45,7 +77,12 @@ export default function MasterDataPage() {
     <div className="w-full max-w-6xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">マスターデータ一覧</h1>
-        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Local Cache</span>
+        <div className="flex items-center gap-2">
+           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
+             WS ID: {JSON.parse(localStorage.getItem('current_workstation') || '{}').workstation_id}
+           </span>
+           <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">Local Cache</span>
+        </div>
       </div>
 
       {/* --- 言語一覧 --- */}
