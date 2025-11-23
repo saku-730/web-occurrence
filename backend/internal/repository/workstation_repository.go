@@ -10,7 +10,7 @@ type WorkstationRepository interface {
 	AddUserToWorkstation(userID, workstationID int64, roleID int64) error
 	FindWorkstationByUserID(userID int64) (*entity.Workstation, error)
 	GetWorkstationsByUserID(userID int64) ([]entity.Workstation, error)
-	// ▼ 追加: 全ワークステーション取得（SyncServiceで使用）
+	GetAllWorkstationUserRelations() ([]entity.WorkstationUser, error)
 	GetAllWorkstations() ([]entity.Workstation, error)
 }
 
@@ -22,12 +22,28 @@ func NewWorkstationRepository(db *gorm.DB) WorkstationRepository {
 	return &workstationRepository{db: db}
 }
 
-func (r *workstationRepository) CreateWorkstation(ws *entity.Workstation) (*entity.Workstation, error) {
-	result := r.db.Create(ws)
-	if result.Error != nil {
-		return nil, result.Error
+func (s *workstationService) CreateWorkstation(userIDStr string, req *model.CreateWorkstationRequest) (*entity.Workstation, error) {
+	userID, _ := strconv.ParseInt(userIDStr, 10, 64)
+
+	newWS := &entity.Workstation{
+		WorkstationName: req.WorkstationName,
 	}
-	return ws, nil
+	createdWS, err := s.wsRepo.CreateWorkstation(newWS)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.wsRepo.AddUserToWorkstation(userID, createdWS.WorkstationID, 1); err != nil {
+		return nil, err
+	}
+
+	dbName := fmt.Sprintf("%s_db_ws_%d", userIDStr, createdWS.WorkstationID)
+
+    if err := s.couchClient.CreateDatabase(dbName); err != nil {
+        fmt.Printf("Warning: Failed to instantly create CouchDB for new WS (%s). Replication will fail until fixed: %v\n", dbName, err)
+    }
+
+	return createdWS, nil
 }
 
 func (r *workstationRepository) AddUserToWorkstation(userID, workstationID int64, roleID int64) error {

@@ -73,16 +73,26 @@ func (s *workstationService) GetMyWorkstations(userIDStr string) ([]entity.Works
 	return s.wsRepo.GetWorkstationsByUserID(userID)
 }
 
-// EnsureAllDatabases はすべてのワークステーションのDBを確保するのだ
 func (s *workstationService) EnsureAllDatabases() error {
-	workstations, err := s.wsRepo.GetAllWorkstations()
+    // ★注意: wsRepoにGetAllWorkstationUserRelations()があることを前提とするのだ。
+    // WorkstationUserエンティティのリストを取得し、ユーザーIDとWS IDのペアを扱うのだ。
+	
+    // 仮定: リポジトリが全てのユーザー・ワークステーションの紐付けを返すのだ
+    relations, err := s.wsRepo.GetAllWorkstationUserRelations() // ★リポジトリ側で実装が必要なのだ
 	if err != nil {
 		return err
 	}
 
 	fmt.Println("--- Checking CouchDB Databases for Workstations ---")
-	for _, ws := range workstations {
-		dbName := s.couchClient.CreateWorkstationDBName(ws.WorkstationID)
+    // ★ユーザーIDとワークステーションIDのペアごとにDBを作成/確認するのだ
+	for _, rel := range relations {
+        // userIDStr: ユーザーIDを文字列に変換するのだ
+        userIDStr := strconv.FormatInt(rel.UserID, 10)
+        
+        // dbNameを新しい命名規則で生成するのだ
+		dbName := fmt.Sprintf("%s_db_ws_%d", userIDStr, rel.WorkstationID)
+        
+        // DB作成
 		if err := s.couchClient.CreateDatabase(dbName); err != nil {
 			// DB作成エラーは致命的なのでログに残す
 			fmt.Printf("Error creating DB %s: %v\n", dbName, err)
