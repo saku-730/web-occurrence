@@ -15,7 +15,7 @@ export default function Home() {
   const [currentWS, setCurrentWS] = useState<any>(null);
 
   // ★ 同期フックを使用
-  const syncState = usePouchDBSync(currentWS?.workstation_id || null);
+  const syncState = usePouchDBSync(currentWS?.workstation_id || null, user?.user_id || null);
 
   useEffect(() => {
     const t = localStorage.getItem('auth_token');

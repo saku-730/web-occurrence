@@ -119,11 +119,11 @@ export default function CreateOccurrencePage() {
       const mod = await import('pouchdb-browser');
       const PouchDB = ((mod.default && typeof mod.default === 'function') ? mod.default : mod) as unknown as any;
       
-      const localDBName = `${DB_NAME}_ws_${currentWS.workstation_id}`;
+      const localDBName = `${userId}_db_ws_${currentWS.workstation_id}`; // userIdは文字列で取得済み
       const db = new PouchDB(localDBName);
       
-      // ★修正: db.put(doc) から db.post(doc) に変更したのだ！
       console.log('--- [FRONTEND DEBUG] Attempting local save via POST');
+
       const response = await db.post(doc);
 
       // 成功ログ
