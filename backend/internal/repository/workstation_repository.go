@@ -10,8 +10,8 @@ type WorkstationRepository interface {
 	AddUserToWorkstation(userID, workstationID int64, roleID int64) error
 	FindWorkstationByUserID(userID int64) (*entity.Workstation, error)
 	GetWorkstationsByUserID(userID int64) ([]entity.Workstation, error)
-	GetAllWorkstationUserRelations() ([]entity.WorkstationUser, error)
 	GetAllWorkstations() ([]entity.Workstation, error)
+	GetAllWorkstationUserRelations() ([]entity.WorkstationUser, error)
 }
 
 type workstationRepository struct {
@@ -22,28 +22,12 @@ func NewWorkstationRepository(db *gorm.DB) WorkstationRepository {
 	return &workstationRepository{db: db}
 }
 
-func (s *workstationService) CreateWorkstation(userIDStr string, req *model.CreateWorkstationRequest) (*entity.Workstation, error) {
-	userID, _ := strconv.ParseInt(userIDStr, 10, 64)
-
-	newWS := &entity.Workstation{
-		WorkstationName: req.WorkstationName,
+func (r *workstationRepository) CreateWorkstation(ws *entity.Workstation) (*entity.Workstation, error) {
+	result := r.db.Create(ws)
+	if result.Error != nil {
+		return nil, result.Error
 	}
-	createdWS, err := s.wsRepo.CreateWorkstation(newWS)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := s.wsRepo.AddUserToWorkstation(userID, createdWS.WorkstationID, 1); err != nil {
-		return nil, err
-	}
-
-	dbName := fmt.Sprintf("%s_db_ws_%d", userIDStr, createdWS.WorkstationID)
-
-    if err := s.couchClient.CreateDatabase(dbName); err != nil {
-        fmt.Printf("Warning: Failed to instantly create CouchDB for new WS (%s). Replication will fail until fixed: %v\n", dbName, err)
-    }
-
-	return createdWS, nil
+	return ws, nil
 }
 
 func (r *workstationRepository) AddUserToWorkstation(userID, workstationID int64, roleID int64) error {
@@ -81,11 +65,21 @@ func (r *workstationRepository) GetWorkstationsByUserID(userID int64) ([]entity.
 	return workstations, nil
 }
 
-// ▼ 追加実装
+// ▼ 追加実装: 全ワークステーション取得（SyncServiceで使用）
 func (r *workstationRepository) GetAllWorkstations() ([]entity.Workstation, error) {
 	var workstations []entity.Workstation
 	if err := r.db.Find(&workstations).Error; err != nil {
 		return nil, err
 	}
 	return workstations, nil
+}
+
+// ★新規実装: 全てのユーザー・ワークステーションの紐付けを取得するのだ
+func (r *workstationRepository) GetAllWorkstationUserRelations() ([]entity.WorkstationUser, error) {
+	var relations []entity.WorkstationUser
+	// entity.WorkstationUser は GORM にテーブル名 (workstation_user) を教えるのだ
+	if err := r.db.Find(&relations).Error; err != nil {
+		return nil, err
+	}
+	return relations, nil
 }

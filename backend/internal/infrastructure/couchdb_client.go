@@ -35,7 +35,7 @@ func NewCouchDBClient(config *model.CouchDBConfig) CouchDBClient {
 	}
 	
 	// 環境変数からプレフィックスを取得、なければデフォルトの "test_db" を使うのだ
-	dbPrefix := "test_db" // 環境変数からの取得が未実装のため一旦固定
+	dbPrefix := "db" // 環境変数からの取得が未実装のため一旦固定
 
 	return &couchDBClient{
 		client:    &http.Client{Timeout: 10 * time.Second},
@@ -155,7 +155,6 @@ func (c *couchDBClient) CreateDatabase(dbName string) error {
 	return fmt.Errorf("DB作成失敗 (ステータス: %d)", resp.StatusCode)
 }
 
-// UpsertDocument はドキュメントを作成または更新するのだ
 func (c *couchDBClient) UpsertDocument(docID string, data map[string]interface{}) error {
 	// data から workstation_id (string) を取得してDB名を決定するのだ
 	wsIDStr, ok := data["workstation_id"].(string)
