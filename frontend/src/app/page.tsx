@@ -63,7 +63,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow p-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold">Web Occurrence</h1>
+        <h1 className="text-xl font-bold text-black">Web Occurrence</h1>
         <div className="flex items-center gap-4">
           {/* 同期状態の表示 */}
           <span className={`text-xs font-mono px-2 py-1 rounded ${
@@ -104,7 +104,7 @@ export default function Home() {
           {/* データ一覧表示エリア (PouchDBから取得して表示する実装が必要) */}
           {/* 今回は省略するが、usePouchDBSyncと同じ要領で allDocs を取得して表示する */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
-            <h2 className="font-bold mb-2">最近のデータ</h2>
+            <h2 className="font-bold mb-2 text-black">最近のデータ</h2>
             <p className="text-sm text-black">ここに登録済みデータが表示されます。</p>
           </div>
         </div>
