@@ -12,6 +12,7 @@ export default function CreateOccurrencePage() {
   const [token, setToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string>('0'); // 数値IDを文字列で保持
   
+  // フォーム状態：分類階級をフルサポート
   const [formData, setFormData] = useState({
     kingdom: 'Animalia',
     phylum: '',
@@ -22,7 +23,7 @@ export default function CreateOccurrencePage() {
     species: '',
     individual_id: '',
     sex: 'unknown',
-    date: new Date().toISOString().slice(0, 16),
+    date: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:mm
     latitude: '',
     longitude: '',
     note: ''
@@ -38,8 +39,7 @@ export default function CreateOccurrencePage() {
     setToken(t);
     setCurrentWS(JSON.parse(ws));
 
-    // ユーザーIDを取得 (APIから取得するか、Login時に保存した値を使う)
-    // ここでは仮にAPIから取得するロジックを入れる
+    // ユーザーIDを取得
     fetch('/api/users/me', { headers: { Authorization: `Bearer ${t}` } })
       .then(res => res.json())
       .then(data => {
@@ -59,22 +59,26 @@ export default function CreateOccurrencePage() {
     setLoading(true);
 
     try {
-      const uuid = () => crypto.randomUUID();
-
-      const occurrenceId = uuid();
-      const classificationId = uuid();
-      const placeId = uuid();
+      // UUID生成ヘルパーはIDを自動生成させるため不要になったのだ
+      // const uuid = () => crypto.randomUUID();
+      
+      const classificationId = crypto.randomUUID(); // ClassificationIDは手動で生成
+      const placeId = crypto.randomUUID();        // PlaceIDは手動で生成
       
       const doc = {
-        _id: `occ_${occurrenceId}`,
+        // ★修正: _id の手動設定を削除し、PouchDBに自動生成させるのだ
+        // _id: `occ_${occurrenceId}`, 
         type: 'occurrence',
         workstation_id: String(currentWS.workstation_id),
-        created_by_user_id: userId, // 取得したIDを使用
+        created_by_user_id: userId,
         project_id: null,
         created_at: new Date(formData.date).toISOString(),
         timezone: '+09:00',
         language_id: '1',
-
+        
+        // ★注意: PouchDBが _id を生成するので、
+        // 発生データ（occurrence_data）の中にIDを入れておく必要はないのだ。
+        
         occurrence_data: {
           individual_id: formData.individual_id,
           lifestage: 'adult',
@@ -118,16 +122,25 @@ export default function CreateOccurrencePage() {
       const localDBName = `${DB_NAME}_ws_${currentWS.workstation_id}`;
       const db = new PouchDB(localDBName);
       
-      await db.put(doc);
+      // ★修正: db.put(doc) から db.post(doc) に変更したのだ！
+      console.log('--- [FRONTEND DEBUG] Attempting local save via POST');
+      const response = await db.post(doc);
 
-      console.log('Saved to local PouchDB:', doc);
-      alert('保存しました！トップページに戻ると同期が開始されます。');
+      // 成功ログ
+      console.log('--- [FRONTEND DEBUG] Local save SUCCESS! New ID:', response.id);
+      alert('保存しました！');
       
       router.push('/');
 
     } catch (err: any) {
-      console.error(err);
-      alert('保存に失敗しました: ' + err.message);
+      console.error('--- [FRONTEND DEBUG] Local save FAILED! Error:', err);
+      // ユーザーフレンドリーなエラーメッセージを出すのだ
+      const message = err.message.includes('Document update conflict') 
+        ? '保存中に競合が発生しました。再試行してください。' 
+        : `保存に失敗しました: ${err.message}`;
+        
+      alert(message);
+      
     } finally {
       setLoading(false);
     }
@@ -146,6 +159,7 @@ export default function CreateOccurrencePage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2 border p-4 rounded bg-gray-50">
             <h2 className="font-bold text-lg mb-2">分類情報 (Classification)</h2>
+            
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold mb-1">Kingdom (界)</label>
@@ -156,6 +170,7 @@ export default function CreateOccurrencePage() {
                 <input name="phylum" value={formData.phylum} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Arthropoda" />
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold mb-1">Class (綱)</label>
@@ -166,6 +181,7 @@ export default function CreateOccurrencePage() {
                 <input name="order" value={formData.order} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Lepidoptera" />
               </div>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold mb-1">Family (科)</label>
@@ -176,12 +192,15 @@ export default function CreateOccurrencePage() {
                 <input name="genus" value={formData.genus} onChange={handleChange} className="w-full border p-2 rounded" placeholder="Papilio" />
               </div>
             </div>
+
             <div>
               <label className="block text-sm font-bold mb-1">Species (種名)</label>
-              <input name="species" value={formData.species} onChange={handleChange} required className="w-full border p-2 rounded" placeholder="xuthus" />
+              <input name="species" value={formData.species} onChange={handleChange} required className="w-full border p-2 rounded" placeholder="xuthus (種小名のみ、または学名全体)" />
             </div>
           </div>
+
           <hr className="my-4" />
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold mb-1">個体ID</label>
@@ -196,24 +215,28 @@ export default function CreateOccurrencePage() {
               </select>
             </div>
           </div>
+
           <div>
             <label className="block text-sm font-bold mb-1">日時</label>
             <input type="datetime-local" name="date" value={formData.date} onChange={handleChange} className="w-full border p-2 rounded" />
           </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold mb-1">緯度</label>
-              <input type="number" step="any" name="latitude" value={formData.latitude} onChange={handleChange} className="w-full border p-2 rounded" />
+              <input type="number" step="any" name="latitude" value={formData.latitude} onChange={handleChange} className="w-full border p-2 rounded" placeholder="例: 36.2" />
             </div>
             <div>
               <label className="block text-sm font-bold mb-1">経度</label>
-              <input type="number" step="any" name="longitude" value={formData.longitude} onChange={handleChange} className="w-full border p-2 rounded" />
+              <input type="number" step="any" name="longitude" value={formData.longitude} onChange={handleChange} className="w-full border p-2 rounded" placeholder="例: 140.1" />
             </div>
           </div>
+
           <div>
             <label className="block text-sm font-bold mb-1">備考</label>
             <textarea name="note" value={formData.note} onChange={handleChange} className="w-full border p-2 rounded h-24" />
           </div>
+
           <button type="submit" disabled={loading} className="w-full bg-green-600 text-white font-bold py-3 rounded hover:bg-green-700 disabled:opacity-50">
             {loading ? '保存中...' : '保存する'}
           </button>
