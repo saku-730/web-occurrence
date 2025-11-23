@@ -26,7 +26,7 @@ func GenerateToken(userID string) (string, error) {
 	return tokenString, nil
 }
 
-func ValidateAndExtractUserID(tokenString string) (string, error) {
+func ValidateToken(tokenString string) (string, error) {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return "", fmt.Errorf("JWT_SECRET が設定されていません")

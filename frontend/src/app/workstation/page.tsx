@@ -24,7 +24,9 @@ export default function WorkstationListPage() {
           return;
         }
 
-        const res = await fetch('/api/workstations', {
+        // ★修正: /api/workstations -> /api/my-workstations に変更
+        // バックエンドの定義と一致させ、自分の所属するワークステーションを取得するようにしたのだ
+        const res = await fetch('/api/my-workstations', {
           headers: {
             'Authorization': `Bearer ${token}`
           }

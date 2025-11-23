@@ -1,45 +1,48 @@
 package middleware
 
 import (
-	"github.com/saku-730/web-occurrence/backend/internal/infrastructure"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/saku-730/web-occurrence/backend/internal/infrastructure"
 )
 
-// AuthMiddleware はJWTトークンを検証し、user_id をコンテキストにセットするのだ
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// 1. Authorization ヘッダーを取得
+		// [DEBUG] ヘッダーの確認ログ
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization ヘッダーがありません"})
-			c.Abort() // 処理を中止
-			return
-		}
-
-		// 2. "Bearer " スキーマをチェック
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Bearer スキーマが正しくありません"})
+			fmt.Println("[AuthMiddleware] Error: Authorization header is empty")
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			c.Abort()
 			return
 		}
 
-		// 3. トークンを検証 (infrastructureにヘルパーを呼ぶ)
-		userID, err := infrastructure.ValidateAndExtractUserID(tokenString)
+		// Bearer トークンの形式チェック
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || parts[0] != "Bearer" {
+			fmt.Printf("[AuthMiddleware] Error: Invalid header format. Got: %s\n", authHeader)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization format"})
+			c.Abort()
+			return
+		}
+
+		tokenString := parts[1]
+
+		// トークンの検証
+		userID, err := infrastructure.ValidateToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "無効なトークンです"})
+			// [DEBUG] 検証失敗の理由を出力（これが知りたかった！）
+			fmt.Printf("[AuthMiddleware] Error: Token validation failed: %v\n", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
 		}
 
-		// 4. 検証成功！ user_id をGinのコンテキストに保存
-		// これで、この後のHandlerが user_id を取り出せるようになる
+		// 成功！コンテキストにセット
 		c.Set("user_id", userID)
-
-		// 5. 次の処理（Handler）へ進む
 		c.Next()
 	}
 }
